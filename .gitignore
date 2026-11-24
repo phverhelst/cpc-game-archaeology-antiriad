@@ -1,0 +1,26 @@
+# Everything generated from the game is rebuilt locally (extract.py, make_all.py) and never committed.
+build/
+__pycache__/
+*.pyc
+*.dsk
+*.DSK
+*.cdt
+*.sna
+*.bin
+*.pkl
+*.asm
+*.png
+*.gif
+*.mp4
+*.mp3
+*.wav
+*.mid
+*.musicxml
+*.pdf
+*.svg
+enemies/ennemis.json
+movement/tal_tables.json
+rooms/salles.json
+sandbox/index.html
+sandbox/armure.html
+sandbox/carte.html

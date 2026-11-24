@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Antiriad, carte complète</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+/* VOICE : établi de rétro-ingénierie, précis et calme.
+   IDEA : l'écran du CPC et le pupitre de l'armure : manette des gaz, élan, énergie.
+   PICTURE : la vraie salle du jeu, Tal ou l'armure dedans, sondes visibles ; carte 2 × 2 à côté.
+   COLOUR and TYPE : bleu CPC, jaune pâle, orange de Tal, cyan des sondes ; Plex Sans et Plex Mono.
+   LAYOUT : écran à gauche, pupitre à droite, réglages dessous ; tout s'empile sous 900px. */
+:root{color-scheme:dark;--bg:#00006e;--pan:#0b1690;--pan2:#12209f;--ink:#ffff9a;--dim:#b9b97a;--acc:#ff8a00;--cyan:#38f0ff;--red:#ff5050;--line:#2a3ab8;--ok:#7dff7d}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "IBM Plex Sans",system-ui,sans-serif;overflow-x:clip}
+h1{font-size:clamp(24px,3.2vw,34px);line-height:1.1;margin:0 0 4px;font-weight:600;text-wrap:balance}
+h2{font-size:19px;margin:0 0 10px;font-weight:600}
+p{margin:0 0 10px;max-width:70ch}
+.band{padding:clamp(16px,2.5vw,32px) max(3vw,14px)}
+.tete{display:flex;flex-wrap:wrap;gap:6px 24px;align-items:baseline;justify-content:space-between}
+.tete p{color:var(--dim);font-size:15px}
+.grille{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;align-items:start}
+@media(max-width:900px){.grille{grid-template-columns:minmax(0,1fr)}}
+.ecran{background:#000;border:3px solid var(--line);border-radius:6px;position:relative}
+.ecran canvas{display:block;width:100%;height:auto;aspect-ratio:960/408;image-rendering:pixelated;touch-action:none;cursor:crosshair}
+.ecran canvas#pan{aspect-ratio:960/192;cursor:default}
+.survol{position:absolute;right:8px;top:6px;font:13px "IBM Plex Mono",monospace;color:var(--cyan);pointer-events:none;background:#000a;padding:1px 6px;border-radius:3px}
+.message{position:absolute;left:0;right:0;bottom:8px;text-align:center;font:600 15px "IBM Plex Mono",monospace;color:#fff;text-shadow:0 0 6px #000,0 0 2px #000;pointer-events:none;transition:opacity .4s}
+.barre{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-top:12px}
+button,select,input{font:inherit;color:var(--ink)}
+button{background:var(--pan2);border:1px solid var(--line);border-radius:6px;min-height:44px;padding:0 14px;cursor:pointer}
+button:hover{border-color:var(--ink)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+button.on{background:var(--ink);color:var(--bg);font-weight:600}
+label{display:inline-flex;gap:6px;align-items:center;font-size:15px}
+input[type=range]{width:140px;accent-color:var(--acc)}
+input[type=checkbox]{width:20px;height:20px;accent-color:var(--acc)}
+.mono{font-family:"IBM Plex Mono",monospace}
+.panneau{background:var(--pan);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.valeurs{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 12px;font:15px/1.45 "IBM Plex Mono",monospace;margin:0}
+.valeurs dt{color:var(--dim);font-family:"IBM Plex Sans",sans-serif;font-size:14px;padding-top:1px}
+.valeurs dd{margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fl{display:inline-block;width:1.5em;text-align:center;border-radius:3px;color:#5a64b8}
+.fl.on{background:var(--acc);color:#000;font-weight:600}
+.etat{color:var(--acc);font-weight:600}
+.jauge{position:relative;height:16px;background:#000;border:1px solid var(--line);border-radius:3px;overflow:hidden;margin:3px 0 0}
+.jauge i{position:absolute;top:0;bottom:0;background:var(--acc)}
+.jauge.centre::after{content:"";position:absolute;left:50%;top:0;bottom:0;border-left:1px dashed var(--dim)}
+.jauge.en i{background:var(--ok)}.jauge.bas i{background:var(--red)}
+.mode{display:inline-block;padding:2px 10px;border-radius:12px;background:var(--acc);color:#000;font-weight:600;font-size:14px}
+.monde{position:relative;background:#000;border:2px solid var(--line);border-radius:6px;overflow:hidden}
+.monde canvas{display:block;width:100%;height:auto;image-rendering:pixelated;cursor:pointer}
+.monde-info{display:flex;flex-wrap:wrap;gap:4px 18px;justify-content:space-between;font-size:14px;color:var(--dim);margin-top:6px}
+.pad{display:none;gap:6px;margin-top:12px;grid-template-columns:repeat(3,56px) 1fr 96px;grid-template-rows:repeat(2,52px);user-select:none;-webkit-user-select:none}
+.pad button{min-height:0;padding:0;font-size:20px;touch-action:none}
+@media(pointer:coarse){.pad{display:grid}}
+.reglages{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:18px}
+.note{color:var(--dim);font-size:14px}
+kbd{font:13px "IBM Plex Mono",monospace;border:1px solid var(--dim);border-radius:3px;padding:0 5px}
+.legende{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:14px;color:var(--dim);margin-top:8px}
+.legende i{display:inline-block;width:14px;height:10px;margin-right:5px;vertical-align:middle}
+.pieces label{display:flex;margin:6px 0}
+</style>
+</head>
+<body>
+<div class="band">
+  <div class="tete">
+    <h1>Antiriad, la carte complète</h1>
+    <p>The Sacred Armour of Antiriad (Palace, 1986). Les 69 salles, Tal à pied et dans l'armure, modèle vérifié contre le jeu.</p>
+  </div>
+  <div class="grille">
+    <div>
+      <div class="ecran">
+        <canvas id="cv" width="960" height="408" aria-label="Salle du jeu avec Tal"></canvas>
+        <canvas id="pan" width="960" height="192" aria-label="Panneau de l'armure, lu dans la mémoire d'écran du jeu"></canvas>
+        <div class="survol" id="survol"></div>
+        <div class="message" id="msg"></div>
+      </div>
+      <div class="pad" id="pad">
+        <span></span><button data-b="1" aria-label="haut">▲</button><span></span><span></span><button data-b="16" aria-label="feu">FEU</button>
+        <button data-b="4" aria-label="gauche">◀</button><button data-b="2" aria-label="bas">▼</button><button data-b="8" aria-label="droite">▶</button><span></span><span></span>
+      </div>
+      <div class="barre">
+        <button id="bPause">Pause</button>
+        <button id="bPas" title="Un tour (touche N), avec les touches tenues">Un tour</button>
+        <button id="bRepartir">Recommencer</button>
+        <label>Cadence <input type="range" id="hz" min="2" max="50" value="17"> <span class="mono" id="hzv">17</span> tours/s</label>
+      </div>
+      <div class="barre">
+        <label>Caméra <select id="camera"><option value="origine">salle par salle, comme le jeu</option><option value="bloc">groupes de 6 salles (3 × 2)</option><option value="glisse">changement de salle glissé</option><option value="fenetre">caméra à fenêtre</option><option value="centre">Tal au centre</option></select></label>
+        <label><input type="checkbox" id="oSondes" checked> sondes</label>
+        <label><input type="checkbox" id="oTrace" checked> trace</label>
+        <label><input type="checkbox" id="oCadres"> cadres de collision</label>
+        <label>Clic sur l'écran : place Tal (ou l'armure qu'il porte)</label>
+      </div>
+      <div class="legende">
+        <span><i style="background:var(--cyan)"></i>sol cherché sous les pieds</span>
+        <span><i style="background:#ffd34d"></i>plafond cherché au-dessus</span>
+        <span><i style="background:var(--red)"></i>test de mur</span>
+      </div>
+    </div>
+    <div class="panneau">
+      <h2>Pupitre <span class="mode" id="mode">à pied</span></h2>
+      <dl class="valeurs" id="val"></dl>
+      <div id="jauges"></div>
+
+    </div>
+  </div>
+</div>
+
+<div class="band" style="padding-top:0">
+  <h2>Carte du monde</h2>
+  <div class="monde"><canvas id="monde" aria-label="Carte des 69 salles"></canvas></div>
+  <div class="monde-info"><span id="visites"></span><span>Cliquer une salle y transporte Tal. Cadre orange : salle actuelle ; salles non visitées assombries.</span></div>
+</div>
+<div class="band" style="padding-top:0">
+  <div class="reglages">
+    <div class="panneau pieces">
+      <h2>Pièces de l'armure et énergie</h2>
+      <label><input type="checkbox" id="p0"> Déplaceur de gravité (&amp;B519) : sans lui, l'armure ne décolle pas</label>
+      <label><input type="checkbox" id="p1"> Rayon pulsar (&amp;B51A) : feu, armure tournée d'un côté</label>
+      <label><input type="checkbox" id="p2"> Mine à implosion (&amp;B51B) : à poser dans l'armure sur la cible de la salle &amp;00</label>
+      <label><input type="checkbox" id="p3"> Négateur de particules (&amp;B51C) : divise par deux les dégâts subis par l'armure et ouvre les salles &amp;00 et &amp;01</label>
+      <label><input type="checkbox" id="oDiag"> Saut en diagonale à pied : haut + la direction où Tal regarde, sans le feu (option absente du jeu ; même saut que feu + haut + direction)</label>
+      <div class="barre">
+        <button id="bActiver" title="Comme après la première entrée dans l'armure">Armure activée</button>
+        <button id="bVie">Vies et énergie au maximum</button>
+        <button id="bCellules">Remettre les cellules</button>
+        <label>Départ <select id="depart"><option value="hasard">au hasard, comme le jeu</option><option value="56">salle &amp;38</option><option value="68">salle &amp;44</option></select></label>
+        <label>Bords sans salle voisine <select id="bords"><option value="jeu">comme le jeu</option><option value="ferme">fermés</option></select></label>
+      </div>
+      <p class="note">Tant que Tal n'est pas entré une première fois dans l'armure, le jeu n'est pas vraiment lancé (&amp;B512) : ni jauges, ni score, ni ramassage, ni radiation. La première entrée déclenche une mise en route d'environ 63 tours, pendant laquelle le panneau clignote selon un motif. « Armure activée » saute cette étape. Pour ramasser une cellule ou une pièce à pied, Tal doit s'accroupir dessus (<kbd>↓</kbd>) ; dans l'armure, le contact suffit. Une cellule portée à pied est consommée dès que Tal est dans l'armure, et remet l'énergie à 31.</p>
+    </div>
+    <div class="panneau">
+      <h2>Commandes</h2>
+      <p class="note">Départ comme dans le jeu : salle &amp;44, sans aucune pièce. L'armure est dans la salle &amp;3F, les pièces en &amp;2B (déplaceur de gravité), &amp;21 (rayon pulsar), &amp;14 (mine) et &amp;06 (négateur) ; les quinze cellules à leurs places d'origine. Les cases ci-dessus permettent aussi d'accorder une pièce sans aller la chercher.</p>
+      <p class="note">Chemin vers l'armure, selon la disposition du jeu. Le plus simple est de venir d'en haut : depuis une plateforme de la salle &amp;31, sauter vers la droite et se laisser tomber par le bas de la salle ; Tal se pose sur la corniche de l'armure. Depuis le sol de la salle &amp;3F, il faut remonter vers la petite marche tout à gauche et, de là, faire un saut de pied ferme vers la droite (feu + haut + droite). Il ne réussit que depuis trois positions (X &amp;05 à &amp;07) ; à X &amp;04, Tal changerait de salle, et le saut en course est impossible, faute d'élan.</p>
+      <p class="note">À pied, comme dans le premier bac à sable. Pour entrer dans l'armure, il faut la toucher en étant de face (état 01) : à l'arrêt, une brève impulsion dans la direction opposée à son regard fait passer Tal de face, et il y reste si l'on relâche. Pour en sortir, l'armure doit être posée (état &amp;17) : pousser à gauche ou à droite. Il faut ensuite 40 tours avant de pouvoir y rentrer.</p>
+      <p class="note">Dans l'armure, <kbd>↑</kbd> et <kbd>↓</kbd> déplacent la manette des gaz d'un cran par tour ; relâchées, elle revient au neutre et l'armure flotte. <kbd>←</kbd> <kbd>→</kbd> tournent l'armure en deux poses, puis la poussent, et elle glisse jusqu'à 6 tours au relâchement. Elle rebondit sur les murs, le sol et le plafond.</p>
+      <p class="note">Groupes de 6 salles : la vue montre trois salles de large sur deux de haut (208 octets sur 257 lignes, marges de 8 octets comprises), en blocs fixes calés pour que la salle de départ &44 soit au centre de la rangée du bas ; le passage d'un bloc à l'autre est sec, comme le changement d'écran du jeu, et Tal n'est pas interpolé. Seules les salles reliées par les liens du jeu à la salle de Tal, de proche en proche dans la vue, sont dessinées ; les cases vides ou non reliées restent noires.</p>
+      <p class="note">Caméra. Chaque écran du jeu montre sa salle (64 octets de large) et 8 octets de chaque salle voisine, et Tal ne change pas de place dans le monde en changeant de salle : le monde est une grille continue de cases de 64 octets sur 128 lignes. « Changement de salle d'origine » reproduit l'affichage du jeu. Les trois autres modes ne changent que la vue : le jeu, les collisions et les changements de salle restent ceux du modèle vérifié ; Tal y est dessiné entre deux tours à une position interpolée, et seules les salles reliées par les liens du jeu, à leur place, sont dessinées autour de la salle courante. Les objets des salles voisines sont montrés, alors que le jeu ne les crée qu'à l'entrée dans la salle.</p>
+      <p class="note">Bords sans salle voisine : « comme le jeu » renvoie de l'autre côté de la même salle, ce qui peut placer Tal ou l'armure dans le sol ; « fermés » les y retient. Le lien du bas de la salle &amp;32 désigne une salle &amp;45 qui n'existe pas : il est traité comme une absence de voisine. La carte est un cylindre : la rangée du haut se referme de &amp;3C à &amp;3B ; et le lien entre &amp;1A et &amp;23 saute par-dessus les salles intermédiaires. </p>
+      <p class="note">Le panneau sous l'écran de jeu n'est pas une illustration : c'est la mémoire d'écran du jeu (lignes 136 à 199, en mode 1), que le modèle remplit avec les routines du jeu transcrites. À gauche, les jauges de vie de Tal et d'énergie de l'armure, qui rattrapent la vraie valeur d'un cran par tour ; le score ; au centre, un petit écran qui affiche en continu… la mémoire du programme elle-même, et l'image d'une pièce quand on la ramasse ; en bas, les messages qui défilent un octet par tour, à la file ; à droite, le cadran de radiation et les voyants des pièces. Pendant la mise en route, le panneau clignote selon le motif lu en &amp;8E12. Toutes les deux secondes (une interruption, en temps réel), Tal récupère un point de vie dans l'armure, la radiation des salles &amp;06 à &amp;19 l'use à pied (de 1 ou 2 points), et les salles &amp;00 et &amp;01 usent l'armure.</p>
+      <p class="note">Le rayon pulsar part au feu, armure tournée d'un côté ; il retire deux coups au lieu d'un. La fin : avec la mine, se poser dans l'armure sur la cible au bas de la salle &amp;00. Tout s'arrête, le compte à rebours défile dans le panneau, et c'est lui qui déclenche l'implosion quand il atteint sa dernière lettre. L'écran se désagrège (16 384 tirages au hasard, 10 240 octets effacés), puis l'armure flotte au centre et le message de victoire défile ; feu pour rejouer. Dans le jeu, la désagrégation dure plusieurs secondes et l'écran tremble (registre 8 du CRTC) : ici elle est accélérée, et le tremblement n'est pas reproduit.</p>
+      <p class="note">Ennemis et obstacles. Les objets de chaque salle sont créés à l'entrée, comme dans le jeu, par le modèle monde.js, transcrit du code Z80 et vérifié contre le jeu (enemies/verif.py, sandbox/verif_monde_js.py). Chaque objet suit son script de mouvement, sans collision avec le décor ; les poursuivants visent la poitrine de Tal. Un ennemi qui touche Tal lui retire sa valeur de dégâts et disparaît ; une pierre (feu à l'arrêt, Tal tourné d'un côté) lui retire un coup, et il en faut de 1 à 4 selon la créature. Les obstacles (plantes, gouttes, pièges fixes, tir du canon) sont invulnérables : la pierre s'y arrête et ils blessent à chaque contact, avec un répit de 8 tours pour les pièges fixes. Les barrières ne gênent que l'armure, qu'elles renvoient. Les salles &amp;00 et &amp;01 tuent Tal à l'entrée sans le négateur. Tal a cinq vies ; à la mort, il renaît sur place.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+/*TAL_JS*/
+</script>
+<script>
+/*ARMURE_JS*/
+</script>
+<script>
+/*MONDE_JS*/
+</script>
+<script>
+{
+const D = /*DONNEES*/;
+const {Modele, nouveauTal, HAUT, BAS, GAUCHE, DROITE, FEU, MONTE, DESCEND, VERS_GAUCHE, VERS_DROITE} = TalModele;
+const OPTS = {sautDiagonal: false};
+const T = D.tables, mp = Modele(T, OPTS), ma = TalArmure.ModeleArmure(T, D.gaz, OPTS);
+const hx = (v, n = 2) => '&' + (v & 0xFFFF).toString(16).toUpperCase().padStart(n, '0');
+const $ = id => document.getElementById(id);
+const NOMS = {1:'de face', 2:'debout', 3:'marche', 4:"s'accroupit", 5:'accroupi', 6:'se relève', 7:'saut', 8:'chute', 9:'réception', 10:'lancer de pierre',
+  0x16:'armure de face', 0x17:'armure posée', 0x18:'se tourne à gauche', 0x19:'armure à gauche', 0x1A:'se tourne à droite', 0x1B:'armure à droite'};
+const NOMS_OBJ = {0x1C: 'cellule', 0x1D: 'déplaceur', 0x1E: 'pulsar', 0x1F: 'mine', 0x20: 'négateur', 0x21: 'téléporteur', 0x22: 'ennemi',
+  0x23: 'ennemi', 0x24: 'ennemi', 0x25: 'ennemi', 0x26: 'ennemi', 0x27: 'volatile', 0x28: 'ennemi', 0x29: 'matérialisation', 0x2A: 'goutte',
+  0x2B: 'canon', 0x2C: 'pierre', 0x2D: 'pierre arrêtée', 0x2E: 'projectile lâché', 0x2F: 'plante', 0x30: 'obstacle', 0x31: 'obstacle', 0x32: 'tir du canon',
+  0x33: 'tir du canon', 0x36: 'armure', 0x37: 'barrière', 0x38: 'barrière', 0x39: 'goutte qui tombe', 0x3A: 'goutte écrasée', 0x3B: 'obstacle', 0x3C: 'obstacle',
+  0x3D: 'cible de la mine', 0x3E: 'décor'};
+const nomEtat = e => e === 0x14 ? 'mort' : e === 0x15 ? 'renaissance' : (e >= 0x16 || e === 1) ? NOMS[e] : (NOMS[e < 0x0B ? e : e - 9] || '?') + (e < 0x0B ? ' (gauche)' : ' (droite)');
+
+// ---- salles (décompressées au chargement)
+const SALLES = {};
+async function chargerSalles(){
+  const bin = atob(D.salles_z), z = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) z[i] = bin.charCodeAt(i);
+  const flux = new Blob([z]).stream().pipeThrough(new DecompressionStream('deflate'));
+  const brut = new Uint8Array(await new Response(flux).arrayBuffer());
+  for (const r in D.palettes) SALLES[r] = {octets: brut.subarray(+r * 10880, (+r + 1) * 10880), palette: D.palettes[r], liens: D.liens[r]};
+  const bin2 = atob(D.memoire_z), z2 = new Uint8Array(bin2.length);
+  for (let i = 0; i < bin2.length; i++) z2[i] = bin2.charCodeAt(i);
+  DEPART_MEM = new Uint8Array(await new Response(new Blob([z2]).stream().pipeThrough(new DecompressionStream('deflate'))).arrayBuffer());
+}
+const ecranDe = r => ({octet: (l, c) => (l >= 0x32 && l < 0xBA && c >= 0 && c < 80) ? SALLES[r].octets[(l - 0x32) * 80 + c] : 0});
+function px0(b){return [((b>>7)&1)|(((b>>3)&1)<<1)|(((b>>5)&1)<<2)|(((b>>1)&1)<<3), ((b>>6)&1)|(((b>>2)&1)<<1)|(((b>>4)&1)<<2)|((b&1)<<3)];}
+function rendreSalle(r, w, h){
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const g = cv.getContext('2d'), s = SALLES[r], sx = w / 160, sy = h / 136;
+  g.fillStyle = s.palette[0]; g.fillRect(0, 0, w, h);
+  for (let l = 0; l < 136; l++) for (let c = 0; c < 80; c++) {
+    const b = s.octets[l * 80 + c]; if (!b) continue;
+    px0(b).forEach((p, i) => { g.fillStyle = s.palette[p]; g.fillRect((c * 2 + i) * sx, l * sy, sx + .5, sy + .5); });
+  }
+  return cv;
+}
+const FONDS = {}; const fond = r => FONDS[r] || (FONDS[r] = rendreSalle(r, 960, 408));
+
+// ---- mémoire du jeu : l'image complète (64 Ko) relevée au début de la boucle principale, comme dans le jeu.
+// Le modèle des objets et le panneau y lisent leurs tables et y écrivent leurs variables (&B400-&B5FF) et
+// l'écran (&C000-&FFFF), dont on affiche ici le panneau (lignes 136 à 199, mode 1).
+const W = Monde, RAM = new Uint8Array(0x10000);
+let DEPART_MEM = null;
+const actif = k => W.actif(RAM, k);
+function tailleSprite(k){ const b = W.o(k), sp = 0x9432 + 4 * (RAM[b + 0xD] & 0x7F); RAM[b + 0xF] = RAM[sp + 2]; RAM[b + 0x10] = RAM[sp + 3]; }
+let salle, tal, dansArmure, visitees, n, trace, joyDernier, message, messageT, pause = false, hz = 17, perdue, clignote = null;
+let fin = null, secondes = 0;                                    // fin : {effaces, t0} après le déclenchement de l'implosion
+const CASES = ['p0', 'p1', 'p2', 'p3'];
+const CHAMPS = [['x', 3], ['y', 4], ['dirs', 7], ['vx', 8], ['vy', 9], ['etat', 0xA], ['pas', 0xB], ['attente', 0xC], ['sprite', 0xD], ['demi_largeur', 0xF], ['hauteur', 0x10]];
+const ARMURE_CH = [['gaz', 0xB51D], ['glisse', 0xB51E], ['entree', 0xB51F], ['sens_prec', 0xB520], ['en_vol', 0xB500], ['phase', 0xB4F3],
+  ['energie', 0xB4FD], ['cellule', 0xB518], ['deplaceur', 0xB519]];
+function talVersRam(){
+  for (const [k, d] of CHAMPS) RAM[0xB400 + d] = tal[k] & 0xFF;
+  RAM[0xB498] = tal.saut; RAM[0xB554] = tal.mur;
+  if (dansArmure) for (const [k, a] of ARMURE_CH) RAM[a] = tal[k] & 0xFF;
+}
+function ramVersTal(){
+  for (const [k, d] of CHAMPS) tal[k] = RAM[0xB400 + d];
+  tal.saut = RAM[0xB498]; tal.mur = RAM[0xB554];
+  for (const [k, a] of ARMURE_CH) tal[k] = RAM[a];
+  dansArmure = RAM[W.A_PIED] === 0;
+}
+const MSG = D.messages;
+const jeu = k => W.message(RAM, k);                              // message du jeu : il défile dans le panneau
+function dire(t){ if (t !== message) { message = t; messageT = performance.now(); } }   // remarque du bac à sable
+function entrerDansSalle(r){                                     // &6A1F, &7051, &6A2A
+  salle = String(r); RAM[W.SALLE] = r; visitees.add(salle);
+  talVersRam(); W.entrerSalle(RAM); ramVersTal();
+  trace = [];
+}
+function repartir(){                                             // l'image du jeu au début de la boucle principale
+  RAM.set(DEPART_MEM);
+  // &58DF : la salle de départ est tirée au sort sur le bit 0 du registre R du Z80 (son compteur de rafraîchissement
+  // mémoire) : &38 à l'extrême gauche du bas de la carte, Tal en X &14, ou &44 à l'extrême droite, en X &24.
+  // L'image mémoire est celle d'un départ en &44 ; pour &38, on refait l'entrée dans la salle et la création de Tal (&7506).
+  const choix = $('depart').value, r = choix === 'hasard' ? (Math.random() < .5 ? 0x38 : 0x44) : +choix;
+  if (r === 0x38) {
+    RAM[W.SALLE] = 0x38; W.entrerSalle(RAM);
+    W.creer(RAM, 0, 0x14, 0x57, 0, 0x01); RAM[0xB408] = 1; RAM[0xB407] = 2; RAM[0xB409] = 0;
+  }
+  tal = nouveauTal({}); dansArmure = false; ramVersTal();
+  n = 0; trace = []; joyDernier = 0; perdue = false; clignote = null; fin = null; secondes = 0;
+  CASES.forEach(id => { $(id).checked = false; });
+  salle = String(RAM[W.SALLE]); visitees = new Set([salle]);
+  talAvantW = talApresW = mondeDe(salle, tal.x, tal.y); coupure = true;
+  dire('');
+}
+function remettreCellules(){ for (let i = 0; i < 15; i++) RAM[0xA066 + 3 * i] &= 0x7F; }
+function versArmure(){                                           // &60D3 : Tal entre dans l'armure
+  RAM[0xB51D] = 7; RAM[0xB51E] = 0;
+  W.paletteArmure(RAM, true);                                    // &61BB : couleurs de l'armure (stylos 13 à 15)
+  W.detruire(RAM, 7);
+  W.creer(RAM, 0, RAM[0xB4F6], (RAM[0xB4F5] - 1) & 0xFF, 0, 0x17); tailleSprite(0);
+  RAM[W.A_PIED] = 0;
+  for (let i = 0; i < 4; i++) if (RAM[0xB53D + i] !== 0xFF) { jeu(RAM[0xB53D + i]); RAM[0xB53D + i] = 0xFF; }   // pièces ramassées à pied
+  if (RAM[W.JEU_LANCE] && RAM[0xB513]) {                         // &6112 : première entrée, mise en route
+    RAM[0xB513] = 0; RAM[0xB4F1] = 0; W.ecrireMot(RAM, 0xB515, 0x8E12); RAM[0xB514] = 7;
+    W.texte(RAM, 0x14, 0x22, 0x8B6B); W.texte(RAM, 0x14, 0x0A, 0x8B88);
+    jeu(0x11); W.rayonnement(RAM, true);
+  }
+  ramVersTal(); trace = [];
+}
+function horsArmure(){                                           // &6150 : sortie, l'armure reste posée
+  if (RAM[0xB538] >= 5) { jeu(0x15); return; }
+  W.detruire(RAM, 0);
+  RAM[0xB4F4] = RAM[W.SALLE]; RAM[0xB4F5] = (tal.y + 1) & 0xFF; RAM[0xB4F6] = tal.x;
+  RAM[0xB517] = 0x28; RAM[W.A_PIED] = 0xFF;
+  W.creer(RAM, 7, RAM[0xB4F6], RAM[0xB4F5], 0, 0x36);
+  W.creer(RAM, 0, tal.x, tal.y, 0, 0x01); tailleSprite(0); RAM[0xB407] = 2; RAM[0xB409] = 0;
+  W.paletteArmure(RAM, false);                                   // &61D2
+  ramVersTal(); trace = [];
+}
+
+function changerSalle(avant){                                    // &69A7
+  const L = SALLES[salle].liens; let cote = null, nouv;
+  if (tal.x < 5) { cote = 'gauche'; nouv = () => { tal.x = 0x44; }; }
+  else if (tal.x >= 0x45) { cote = 'droite'; nouv = () => { tal.x = 6; }; }
+  else if (tal.y < 0x19) { cote = 'haut'; nouv = () => { tal.y = 0x99; }; }
+  else if (tal.y >= 0x9B) { cote = 'bas'; nouv = () => { tal.y = 0x1B; }; }
+  if (!cote) return;
+  if (L[cote] !== 255) { nouv(); entrerDansSalle(L[cote]); return; }
+  if ($('bords').value === 'jeu') { nouv(); entrerDansSalle(+salle); dire('Pas de salle voisine : retour de l’autre côté (comme le jeu)'); return; }
+  tal.x = avant.x; tal.y = avant.y; dire('Bord sans salle voisine (fermé)');
+}
+
+const peutRamasser = () => !RAM[W.JEU_LANCE] && (dansArmure || [0x04, 0x0D].includes(tal.etat & 0x7F));   // &5D85
+function poignee(p, k){                                          // poignées de contact hors du modèle des objets
+  if (p === 0) {                                                 // &59F7 : cellule de recharge
+    if (!peutRamasser()) return;
+    if (RAM[0xB518]) {
+      W.detruire(RAM, k); RAM[0xB518] = 0; RAM[W.mot(RAM, 0xB539)] |= 0x80;
+      if (dansArmure) { RAM[0xB4FD] = 0x1F; jeu(0x0C); }
+    } else jeu(0x01);
+  } else if (p >= 1 && p <= 4) {                                 // &5A2D-&5A99 : pièces de l'armure
+    if (!peutRamasser()) return;
+    W.detruire(RAM, k);
+    jeu([0x08, 0x09, 0x0B, 0x0A][p - 1]);
+    W.texte(RAM, [0x17, 0x16, 0x17, 0x16][p - 1], [0x1F, 0x20, 0x21, 0x22][p - 1], 0x8B6E);   // voyant de la pièce
+    RAM[0xB519 + p - 1] = 0; $(CASES[p - 1]).checked = true;
+  } else if (p === 6) {                                          // &6094 : armure
+    if (actif(0)) {
+      if (!RAM[0xB4FB] || RAM[0xB400] || RAM[0xB517] || (RAM[0xB40A] & 0x7F) !== 1) return;
+      W.tuer(RAM, 0);
+    } else versArmure();
+  } else if (p === 7) {                                          // &5ABD : téléporteur
+    if (actif(0)) {
+      if ((RAM[0xB40A] & 0x7F) !== 1 || RAM[W.JEU_LANCE]) return;
+      W.tuer(RAM, 0); jeu(0x07);
+    } else if (!RAM[0xB412]) {
+      entrerDansSalle(RAM[0xB4F4]);
+      W.creer(RAM, 0, RAM[0xB4F6], (RAM[0xB4F5] - 1) & 0xFF, 0, 0x01); tailleSprite(0); RAM[0xB408] = 1; RAM[0xB407] = 2;
+      ramVersTal();
+    }
+  }
+}
+
+function tick(joy){
+  joyDernier = joy; RAM[0x7A4C] = joy;
+  if ((secondes += 1 / hz) >= 2) { secondes -= 2; if (!fin || fin.finale) W.toutesLesDeuxSecondes(RAM); }   // &6F18, interruption
+  if (fin) {                                                     // l'implosion puis la boucle finale (&5CA6)
+    if (fin.finale) { W.boucleFinale(RAM); if (joy & FEU) repartir(); }
+    else if (++fin.t >= 40) fin.finale = true;                   // le jeu met quelques secondes à désagréger l'écran
+    n++; return;
+  }
+  const avant = {x: tal.x, y: tal.y};
+  talAvantW = mondeDe(salle, tal.x, tal.y);
+  const ecran = ecranDe(salle);
+  // logique propre de Tal (&5744 dans l'armure, &6150, &5787 à pied)
+  if (dansArmure) {
+    if (RAM[0xB519]) { if (joy & HAUT) jeu(0x0D); }              // &5776 : sans le déplaceur, l'armure est inerte
+    else {
+      ma.armureTour(tal, joy, ecran);
+      talVersRam(); const m = W.tirPulsar(RAM); if (m) jeu(m); ramVersTal();   // &64EF
+      if (tal.energie === 0) jeu(0x10); else if (tal.energie < 7) jeu(0x0F);   // &62AE
+    }
+    if ((tal.etat & 0x7F) === 0x17 && (joy & 0x0C)) horsArmure();
+  } else {
+    talVersRam();
+    const r = W.mortDeTal(RAM);
+    ramVersTal();
+    if (r === 'renaissance' && !RAM[W.JEU_LANCE]) jeu(RAM[0xB550]);
+    if (r === 'fin') {                                           // &582C : perdu ; feu pour rejouer
+      if (!perdue) { perdue = true; if (!RAM[W.JEU_LANCE]) jeu(0x06); }
+      if ((joy & FEU) && (RAM[W.JEU_LANCE] || W.mot(RAM, 0xB534) === W.mot(RAM, 0xB536))) { repartir(); return; }
+    } else if (!RAM[0xB412] && !RAM[0xB400]) mp.piedTour(tal, joy, ecran);   // &65A2 : rien pendant un fondu ou un script
+  }
+  // le reste de la boucle (&5704-&5598)
+  talVersRam();
+  const hors = [];
+  const r = W.finDeTour(RAM, hors);
+  if (r === 'fin') { fin = {t: 0, effaces: W.implosion(RAM), finale: false}; ramVersTal(); n++; return; }
+  clignote = r;
+  ramVersTal();
+  for (const [p, k] of hors) poignee(p, k);
+  changerSalle(avant);
+  talApresW = mondeDe(salle, tal.x, tal.y);
+  coupure = Math.abs(talApresW.x - talAvantW.x) > 8 || Math.abs(talApresW.y - talAvantW.y) > 16;
+  n++;
+  trace.push({x: tal.x, y: tal.y + tal.hauteur, a: dansArmure}); if (trace.length > 200) trace.shift();
+}
+
+// ---- entrées
+let tenu = 0;
+const TOUCHES = {ArrowUp: HAUT, ArrowDown: BAS, ArrowLeft: GAUCHE, ArrowRight: DROITE, ' ': FEU};
+addEventListener('keydown', ev => {
+  if (ev.target.tagName === 'INPUT' || ev.target.tagName === 'SELECT') return;
+  if (TOUCHES[ev.key]) { tenu |= TOUCHES[ev.key]; ev.preventDefault(); return; }
+  const k = ev.key.toLowerCase();
+  if (k === 'p') basculerPause(); else if (k === 'n') unTour();
+});
+addEventListener('keyup', ev => { if (TOUCHES[ev.key]) tenu &= ~TOUCHES[ev.key]; });
+addEventListener('blur', () => { tenu = 0; });
+document.querySelectorAll('#pad button').forEach(b => {
+  const v = +b.dataset.b;
+  b.addEventListener('pointerdown', ev => { tenu |= v; b.classList.add('on'); b.setPointerCapture(ev.pointerId); ev.preventDefault(); });
+  const lache = () => { tenu &= ~v; b.classList.remove('on'); };
+  b.addEventListener('pointerup', lache); b.addEventListener('pointercancel', lache);
+});
+function basculerPause(){ pause = !pause; $('bPause').textContent = pause ? 'Reprendre' : 'Pause'; $('bPause').classList.toggle('on', pause); }
+function unTour(){ if (!pause) basculerPause(); tick(tenu); }
+$('bPause').onclick = basculerPause; $('bPas').onclick = unTour; $('bRepartir').onclick = repartir; $('depart').onchange = repartir;
+$('hz').oninput = ev => { hz = +ev.target.value; $('hzv').textContent = hz; };
+CASES.forEach((id, i) => { $(id).onchange = () => {
+  RAM[0xB519 + i] = $(id).checked ? 0 : 0xFF; tal.deplaceur = RAM[0xB519];
+  if ($(id).checked) { jeu([0x08, 0x09, 0x0B, 0x0A][i]); W.texte(RAM, [0x17, 0x16, 0x17, 0x16][i], [0x1F, 0x20, 0x21, 0x22][i], 0x8B6E); }
+}; });
+$('bActiver').onclick = () => {                                 // comme à la fin de la mise en route (&6112, &6077)
+  if (!RAM[W.JEU_LANCE]) return;
+  RAM[W.JEU_LANCE] = 0; RAM[0xB513] = 0xFF;
+  W.texte(RAM, 0x14, 0x22, 0x8B6B); W.texte(RAM, 0x14, 0x0A, 0x8B88); W.rayonnement(RAM, true); jeu(0x11);
+};
+$('bVie').onclick = () => { RAM[0xB4FB] = RAM[0xB4FD] = 0x1F; RAM[0xB551] = 0x20; RAM[0xB550] = 1; perdue = false; };
+$('bCellules').onclick = remettreCellules;
+$('oDiag').onchange = ev => { OPTS.sautDiagonal = ev.target.checked; };
+
+const cv = $('cv'), g = cv.getContext('2d');
+function sousPointeur(ev){
+  const r = cv.getBoundingClientRect();
+  let col = Math.floor((ev.clientX - r.left) / r.width * LARG), ligne = 0x32 + Math.floor((ev.clientY - r.top) / r.height * HAUTV);
+  if (modeCamera() !== 'origine') { const o = mondeDe(salle, 0, 0x32); col += Math.round(cam.x - o.x); ligne += Math.round(cam.y - o.y); }
+  return {col: Math.max(0, Math.min(79, col)), ligne: Math.max(0x32, Math.min(0xB9, ligne))};
+}
+cv.addEventListener('pointermove', ev => { const p = sousPointeur(ev); $('survol').textContent = 'salle ' + hx(+salle) + '  col ' + hx(p.col) + '  ligne ' + hx(p.ligne); });
+cv.addEventListener('pointerleave', () => { $('survol').textContent = ''; });
+cv.addEventListener('pointerdown', ev => {
+  const p = sousPointeur(ev);
+  tal.x = Math.min(p.col, 0x49); tal.y = Math.max(0x19, p.ligne - tal.hauteur); tal.vy = 0; trace = [];
+  talAvantW = talApresW = mondeDe(salle, tal.x, tal.y); coupure = true;
+  if (dansArmure) { tal.gaz = 7; tal.glisse = 0; tal.dirs = 0; }
+  else { tal.dirs = DESCEND; tal.saut = 0; tal.etat = (tal.sprite & 0x80) ? 0x0B : 0x02; tal.pas = 0; tal.attente = 0; }
+});
+
+// ---- carte du monde
+const MW = 80, MH = 34, PAD = 2, mc = $('monde'), mg = mc.getContext('2d');
+const COLS = Math.max(...Object.values(D.pos).map(p => p[0])) + 1, ROWS = Math.max(...Object.values(D.pos).map(p => p[1])) + 1;
+let VIGNETTES = null;
+function construireMonde(){
+  mc.width = COLS * (MW + PAD) + PAD; mc.height = ROWS * (MH + PAD) + PAD;
+  VIGNETTES = {}; for (const r in D.pos) VIGNETTES[r] = rendreSalle(r, MW, MH);
+  mc.onclick = ev => {
+    const b = mc.getBoundingClientRect(), x = (ev.clientX - b.left) / b.width * mc.width, y = (ev.clientY - b.top) / b.height * mc.height;
+    const cx = Math.floor((x - PAD) / (MW + PAD)), cy = Math.floor((y - PAD) / (MH + PAD));
+    for (const r in D.pos) if (D.pos[r][0] === cx && D.pos[r][1] === cy) { entrerDansSalle(+r); talAvantW = talApresW = mondeDe(salle, tal.x, tal.y); coupure = true; }
+  };
+}
+function dessinerMonde(){
+  if (!VIGNETTES) return;
+  mg.fillStyle = '#000'; mg.fillRect(0, 0, mc.width, mc.height);
+  for (const r in D.pos) {
+    const [cx, cy] = D.pos[r], x = PAD + cx * (MW + PAD), y = PAD + cy * (MH + PAD);
+    mg.globalAlpha = visitees.has(String(r)) ? 1 : .35; mg.drawImage(VIGNETTES[r], x, y); mg.globalAlpha = 1;
+    if (String(r) === salle) {
+      mg.strokeStyle = '#ff8a00'; mg.lineWidth = 3; mg.strokeRect(x - 1, y - 1, MW + 2, MH + 2);
+      mg.fillStyle = '#ff8a00'; mg.fillRect(x + tal.x / 80 * MW, y + Math.max(0, tal.y - 0x32) / 136 * MH, 4, 6);
+    }
+    if (!dansArmure && RAM[0xB4F4] === +r) { mg.fillStyle = '#38f0ff'; mg.fillRect(x + RAM[0xB4F6] / 80 * MW, y + (RAM[0xB4F5] - 0x32) / 136 * MH, 4, 8); }
+    D.pieces.forEach((p, i) => { if (RAM[0xB519 + i] && p.salle === +r) { mg.fillStyle = '#ffff9a'; mg.fillRect(x + p.x / 80 * MW - 1, y + (p.y - 0x32) / 136 * MH - 1, 4, 4); } });
+    D.cellules.forEach((c, i) => { if (RAM[0xA066 + 3 * i] === +r) { mg.fillStyle = '#7dff7d'; mg.fillRect(x + c.x / 80 * MW - 1, y + (c.y - 0x32) / 136 * MH - 1, 3, 3); } });
+    mg.fillStyle = 'rgba(0,0,0,.6)'; mg.fillRect(x, y, 22, 11); mg.fillStyle = '#ffff9a'; mg.font = '10px monospace'; mg.fillText((+r).toString(16).toUpperCase().padStart(2, '0'), x + 3, y + 9);
+  }
+  let np = 0, nc = 0; for (let i = 0; i < 4; i++) if (!RAM[0xB519 + i]) np++; for (let i = 0; i < 15; i++) if (RAM[0xA066 + 3 * i] & 0x80) nc++;
+  $('visites').textContent = 'Salles visitées : ' + visitees.size + ' sur 69 · pièces : ' + np + ' sur 4 · cellules prises : ' + nc + ' sur 15';
+}
+
+// ---- dessin et caméra
+// Le monde est une grille de cases de 64 octets sur 128 lignes (seuils de &69A7) ; chaque écran du jeu
+// montre sa case et 8 octets de chaque voisine horizontale. Position dans le monde : colonne × 64 + X,
+// rangée × 128 + (Y − &32). Le modèle et ses changements de salle ne changent pas : seule la vue bouge.
+const LIGNES_SALLE = 129;                                      // 128 lignes + la ligne de sol &B2 ; le bandeau du bas est omis
+let LARG = 80, HAUTV = 136;                                    // taille de la vue (octets, lignes) ; 3 × 64 + 16 et 2 × 128 + 1 en groupes de 6
+// Groupes de 6 salles : blocs de 3 colonnes sur 2 rangées de la grille, calés pour que &44 (départ) soit au centre
+// de la rangée du bas. Comme dans le jeu, la vue bascule d'un coup quand Tal passe dans une salle d'un autre bloc.
+const BLOC = (() => { const p = D.pos[String(0x44)]; return {c: p[0] - 1, r: p[1] - 1}; })();
+function blocDe(r){ const p = D.pos[r]; return {x: Math.floor((p[0] - BLOC.c) / 3) * 3 + BLOC.c, y: Math.floor((p[1] - BLOC.r) / 2) * 2 + BLOC.r}; }
+function taillerVue(mode){
+  const [l, h] = mode === 'bloc' ? [3 * 64 + 16, 2 * 128 + 1] : [80, 136];
+  if (l === LARG && h === HAUTV) return;
+  LARG = l; HAUTV = h; cv.width = l * 12; cv.height = h * 3; cv.style.aspectRatio = (l * 12) + '/' + (h * 3);
+}
+function mondeDe(r, x, y){ const p = D.pos[r]; return {x: p[0] * 64 + x, y: p[1] * 128 + (y - 0x32)}; }
+let talAvantW = {x: 0, y: 0}, talApresW = {x: 0, y: 0}, coupure = true, cam = {x: 0, y: 0}, modePrec = null;
+const modeCamera = () => $('camera').value;
+const DIRS = {droite: [1, 0], gauche: [-1, 0], bas: [0, 1], haut: [0, -1]};
+function sallesVisibles(){                                       // reliées par les liens du jeu, à leur place sur la grille
+  const vues = [salle], deja = new Set([salle]);
+  for (let i = 0; i < vues.length; i++) {
+    const r = vues[i], p = D.pos[r];
+    for (const [cote, [dx, dy]] of Object.entries(DIRS)) {
+      const v = D.liens[r][cote]; if (v === 255) continue;
+      const k = String(v), q = D.pos[k];
+      if (deja.has(k) || q[0] !== p[0] + dx || q[1] !== p[1] + dy) continue;
+      const x0 = q[0] * 64, y0 = q[1] * 128;
+      if (x0 + 80 <= cam.x || x0 >= cam.x + LARG || y0 + LIGNES_SALLE <= cam.y || y0 >= cam.y + HAUTV) continue;
+      deja.add(k); vues.push(k);
+    }
+  }
+  return vues.sort((a, b) => D.pos[a][1] - D.pos[b][1] || D.pos[a][0] - D.pos[b][0]);
+}
+function majCamera(alpha){
+  const mode = modeCamera(), o = mondeDe(salle, 0, 0x32);
+  const t = coupure ? talApresW : {x: talAvantW.x + (talApresW.x - talAvantW.x) * alpha, y: talAvantW.y + (talApresW.y - talAvantW.y) * alpha};
+  const neuf = mode !== modePrec; modePrec = mode; taillerVue(mode);
+  if (mode === 'bloc') { const b = blocDe(salle); cam = {x: b.x * 64, y: b.y * 128}; }
+  else if (mode === 'origine' || (mode === 'glisse' && (coupure || neuf))) { cam = {x: o.x, y: o.y}; }
+  else if (mode === 'glisse') {
+    cam.x += (o.x - cam.x) * 0.22; cam.y += (o.y - cam.y) * 0.22;
+    if (Math.abs(o.x - cam.x) < 0.2) cam.x = o.x; if (Math.abs(o.y - cam.y) < 0.2) cam.y = o.y;
+  } else if (mode === 'centre') { cam = {x: t.x + 3 - LARG / 2, y: t.y + tal.hauteur / 2 - HAUTV / 2}; }
+  else {                                                          // fenêtre : zone morte centrale
+    if (neuf || coupure) cam = {x: t.x + 3 - LARG / 2, y: t.y + tal.hauteur / 2 - HAUTV / 2};
+    const mx = 24, my = 30;
+    if (t.x < cam.x + mx) cam.x = t.x - mx; if (t.x + 6 > cam.x + LARG - mx) cam.x = t.x + 6 - LARG + mx;
+    if (t.y < cam.y + my) cam.y = t.y - my; if (t.y + tal.hauteur > cam.y + HAUTV - my) cam.y = t.y + tal.hauteur - HAUTV + my;
+  }
+  return {dx: (t.x - talApresW.x) * 12, dy: (t.y - talApresW.y) * 3};   // décalage d'affichage de Tal (interpolation)
+}
+const HWC = D.hw;
+// stylos 1 à 7 : schéma de la salle ; 0 et 8 à 15 : table &8DF3 du jeu, que l'entrée dans l'armure modifie (&61BB)
+function paletteSalle(r){ return SALLES[r].palette.map((c, k) => k >= 1 && k <= 7 ? c : HWC[RAM[0x8DF3 + k] & 31]); }
+// ---- le panneau : lignes 136 à 199 de l'écran, en mode 1, avec les stylos 1 à 3 de &8E09 (interruption 4)
+const pan = $('pan'), pg = pan.getContext('2d'), panIm = document.createElement('canvas');
+panIm.width = 320; panIm.height = 64;
+const panG = panIm.getContext('2d'), panData = panG.createImageData ? panG.createImageData(320, 64) : null;
+function dessinerPanneau(){
+  if (!panData) return;
+  const pens = [RAM[0x8DF3], RAM[0x8E09], RAM[0x8E0A], RAM[0x8E0B]].map(h => {
+    const c = HWC[h & 31]; return [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)]; });
+  const d = panData.data;
+  for (let l = 0; l < 64; l++) {
+    const ligne = 136 + l, base = 0xC000 + (ligne % 8) * 0x800 + (ligne >> 3) * 80;
+    for (let x = 0; x < 80; x++) {
+      const b = RAM[base + x];
+      for (let i = 0; i < 4; i++) {
+        const p = ((b >> (7 - i)) & 1) | (((b >> (3 - i)) & 1) << 1), o = ((l * 320) + x * 4 + i) * 4, c = pens[p];
+        d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2]; d[o + 3] = 255;
+      }
+    }
+  }
+  panG.putImageData(panData, 0, 0);
+  pg.imageSmoothingEnabled = false; pg.drawImage(panIm, 0, 0, 960, 192);
+}
+// ---- l'implosion : octets de l'écran mis à zéro par &5C31, ramenés aux lignes de la zone de jeu (table &8BF3)
+let LIGNE_DE = null;
+function dessinerImplosion(){
+  if (!fin) return;
+  if (!LIGNE_DE) { LIGNE_DE = new Map(); for (let y = 0x32; y < 0xBA; y++) { const a = W.mot(RAM, 0x8BF3 + 2 * y); for (let x = 0; x < 80; x++) LIGNE_DE.set((a + x) & 0xFFFF, [y, x]); } }
+  const k = fin.finale ? fin.effaces.length : Math.floor(fin.effaces.length * fin.t / 40);
+  g.fillStyle = '#000';
+  for (let i = 0; i < k; i++) { const p = LIGNE_DE.get(fin.effaces[i]); if (p) g.fillRect(p[1] * 12, (p[0] - 0x32) * 3, 12, 3); }
+}
+function dessinerSprite(id, x, y, miroir, alpha, pal){
+  const s = D.sprites[id & 0x7F]; if (!s) return;
+  pal = pal || paletteSalle(salle); g.globalAlpha = alpha ?? 1;
+  s.l.forEach((ligne, yy) => {
+    for (let i = 0; i < ligne.length; i++) {
+      const c = ligne[miroir ? ligne.length - 1 - i : i]; if (c === '.') continue;
+      g.fillStyle = pal[parseInt(c, 16)]; g.fillRect(x * 12 + i * 6, (y - 0x32) * 3 + yy * 3, 6, 3);
+    }
+  });
+  g.globalAlpha = 1;
+}
+const fondu = k => { const b = W.o(k), f = RAM[b + 0x12]; return !f ? 1 : f < 0x80 ? .2 + .8 * RAM[b + 0x11] / 12 : .2 + .8 * Math.max(0, RAM[b + 0x11]) / 12; };
+function dessinerObjets(r){                                      // emplacements 1 à 7, dans la salle de Tal seulement
+  if (r !== salle) return;
+  const pal = paletteSalle(r);
+  for (let k = 7; k >= 1; k--) if (actif(k)) {
+    const b = W.o(k), sp = RAM[b + 0xD];
+    dessinerSprite(sp, RAM[b + 3], RAM[b + 4], sp & 0x80, fondu(k) * (k === 7 && RAM[0xB517] ? .6 : 1), pal);
+    if ($('oCadres').checked) {
+      g.strokeStyle = (RAM[W.prop(RAM, RAM[b + 0xA] & 0x7F)] & 0x80) ? 'rgba(255,211,77,.8)' : 'rgba(255,80,80,.8)'; g.lineWidth = 1;
+      g.strokeRect(RAM[b + 3] * 12 + .5, (RAM[b + 4] - 0x32) * 3 + .5, RAM[b + 0xF] * 24, RAM[b + 0x10] * 3);
+    }
+  }
+}
+function dessinerSondes(t){
+  const e = t.etat & 0x7F;
+  if (dansArmure) {
+    g.fillStyle = 'rgba(56,240,255,.35)'; g.fillRect(t.x * 12, (t.y + t.hauteur + 1 - 0x32) * 3, 72, (t.vy + 1) * 3);
+    g.fillStyle = 'rgba(255,211,77,.35)'; g.fillRect(t.x * 12 + 12, (t.y + 3 - t.vy - 0x32) * 3, 48, (t.vy + 1) * 3);
+  } else if (!(t.dirs & MONTE)) {
+    g.fillStyle = 'rgba(56,240,255,.35)'; g.fillRect(t.x * 12, (t.y + t.hauteur + 1 - 0x32) * 3, 72, Math.max(1, T.vitesses[t.saut]) * 3);
+  }
+  const h = t.dirs & 0x0C;
+  if (T.etats_mur.includes(e) && h) {
+    const col = (h & VERS_DROITE) ? t.x + 7 : t.x - 1, lignes = dansArmure ? 0x26 : 0x23;
+    if (col >= 0 && col < 80) {
+      g.strokeStyle = '#ff5050'; g.lineWidth = 2; g.strokeRect(col * 12 + 1, (t.y + 4 - 0x32) * 3, 10, lignes * 3);
+      if (t.mur === 0) { g.fillStyle = 'rgba(255,80,80,.55)'; g.fillRect(col * 12 + 1, (t.y + 4 - 0x32) * 3, 10, lignes * 3); }
+    }
+  }
+}
+function dessiner(alpha){
+  const mode = modeCamera(), dec = majCamera(mode === 'origine' || mode === 'bloc' ? 1 : alpha), o = mondeDe(salle, 0, 0x32);
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  if (mode === 'origine') { g.drawImage(fond(salle), 0, 0); dessinerImplosion(); dessinerObjets(salle); }
+  else {
+    g.fillStyle = '#000'; g.fillRect(0, 0, cv.width, cv.height);
+    for (const r of sallesVisibles()) {
+      const q = mondeDe(r, 0, 0x32);
+      g.setTransform(1, 0, 0, 1, Math.round((q.x - cam.x) * 12), Math.round((q.y - cam.y) * 3));
+      g.drawImage(fond(r), 0, 0, 960, LIGNES_SALLE * 3, 0, 0, 960, LIGNES_SALLE * 3);
+      dessinerObjets(r);
+    }
+  }
+  const ox = mode === 'origine' ? 0 : Math.round((o.x - cam.x) * 12), oy = mode === 'origine' ? 0 : Math.round((o.y - cam.y) * 3);
+  g.setTransform(1, 0, 0, 1, ox, oy);
+  if ($('oTrace').checked) trace.forEach(p => { g.fillStyle = p.a ? '#38f0ff' : '#ff8a00'; g.fillRect(p.x * 12 + 33, (p.y - 0x32) * 3 - 1, 6, 4); });
+  g.setTransform(1, 0, 0, 1, ox + Math.round(dec.dx), oy + Math.round(dec.dy));
+  if (actif(0) || RAM[0xB412]) dessinerSprite(tal.sprite, tal.x, tal.y, tal.sprite & 0x80, actif(0) ? fondu(0) : 0);
+  g.setTransform(1, 0, 0, 1, ox, oy);
+  if ($('oSondes').checked) dessinerSondes(tal);
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  const age = performance.now() - messageT;
+  $('msg').textContent = message || ''; $('msg').style.opacity = message && age < 3500 ? 1 : 0;
+  dessinerPanneau();
+}
+
+// ---- pupitre
+const fl = (on, s) => `<span class="fl ${on ? 'on' : ''}">${s}</span>`;
+const jauge = (titre, v, min, max, cls, centre) => {
+  const p = (v - min) / (max - min) * 100, z = centre ? 50 : 0;
+  return `<dt>${titre}</dt><dd><div class="jauge ${cls} ${centre ? 'centre' : ''}"><i style="left:${Math.min(z, p)}%;width:${Math.abs(p - z)}%"></i></div></dd>`;
+};
+function majPupitre(){
+  const t = tal, e = t.etat & 0x7F, j = joyDernier;
+  $('mode').textContent = dansArmure ? "dans l'armure" : 'à pied';
+  const rows = [
+    ['Salle', hx(+salle) + '   tour ' + n + (pause ? ' (pause)' : '')],
+    ['Joystick', fl(j & HAUT, '↑') + fl(j & BAS, '↓') + fl(j & GAUCHE, '←') + fl(j & DROITE, '→') + fl(j & FEU, 'F')],
+    ['État', `<span class="etat">${hx(e)}</span> ${nomEtat(e)}${t.etat & 0x80 ? ', fini' : ''}`],
+    ['X, Y', `${hx(t.x)}, ${hx(t.y)}`],
+    ['Directions', fl(t.dirs & MONTE, '↑') + fl(t.dirs & DESCEND, '↓') + fl(t.dirs & VERS_GAUCHE, '←') + fl(t.dirs & VERS_DROITE, '→')],
+    ['Vitesses', `vx ${t.vx}, vy ${t.vy}`],
+  ];
+  if (dansArmure) rows.push(['Gaz &B51D', `cran ${t.gaz} → ${D.gaz[t.gaz & 0x7F][0] & 1 ? 'monte ' : D.gaz[t.gaz & 0x7F][0] & 2 ? 'descend ' : 'neutre '}${D.gaz[t.gaz & 0x7F][1]}`],
+                            ['Glisse &B51E', `${t.glisse} tour(s)`], ['En vol &B500', t.en_vol ? 'oui' : 'au contact'],
+                            ['Énergie &B4FD', `${t.energie} / 31`]);
+  rows.push(['Cellule', RAM[0xB518] === 0 ? 'portée' : 'aucune']);
+  if (!dansArmure && RAM[0xB517]) rows.push(['Rentrée', `dans ${RAM[0xB517]} tours`]);
+  let vies = 0; for (let b = RAM[0xB551]; b > 1; b >>= 1) vies++;
+  rows.push(['Vie &B4FB', `${RAM[0xB4FB]} / 31, ${vies} vie(s)` + (RAM[W.REPIT] ? `, répit ${RAM[W.REPIT]}` : '')],
+            ['Score &B536', W.mot(RAM, W.SCORE)],
+            ['Armure', RAM[W.JEU_LANCE] ? (RAM[0xB513] ? 'pas encore activée' : `mise en route ${clignote ? '■' : '□'}`) : `activée, radiation ${RAM[0xB538]}`]);
+  const obj = [];
+  for (let k = 1; k < 8; k++) if (actif(k)) {
+    const b = W.o(k), e = RAM[b + 0xA] & 0x7F;
+    obj.push(`${k}:${hx(e)} ${NOMS_OBJ[e] || ''}` + (k >= 2 && e >= 0x22 && e <= 0x29 ? ` (${RAM[W.COUPS + k - 2]})` : ''));
+  }
+  rows.push(['Objets', obj.join('<br>') || '—']);
+  if (perdue) rows.push(['Partie', 'perdue : feu pour rejouer']);
+  if (fin) rows.push(['Partie', fin.finale ? 'gagnée : feu pour rejouer' : 'implosion…']);
+  $('val').innerHTML = rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
+  $('jauges').innerHTML = dansArmure ? '<dl class="valeurs" style="margin-top:8px">' +
+    jauge('Gaz (−4 à +4)', 7 - Math.min(t.gaz, 14), -7, 7, '', true) + jauge('Élan', t.glisse, 0, 6, '', false) +
+    jauge('Énergie', t.energie, 0, 31, t.energie < 7 ? 'bas' : 'en', false) + '</dl>' : '';
+  dessinerMonde();
+}
+
+let acc = 0, prec = 0;
+function boucle(tm){
+  const dt = Math.min(250, tm - prec); prec = tm;
+  if (!pause) { acc += dt; let k = 0; while (acc >= 1000 / hz && k++ < 6) { tick(tenu); acc -= 1000 / hz; } if (k >= 6) acc = 0; }
+  dessiner(pause ? 1 : Math.min(1, acc / (1000 / hz))); majPupitre();
+  requestAnimationFrame(boucle);
+}
+chargerSalles().then(() => {
+  construireMonde(); repartir();
+  requestAnimationFrame(tm => { prec = tm; boucle(tm); });
+}).catch(e => { $('msg').textContent = 'Ce navigateur ne sait pas décompresser les salles (DecompressionStream) : ' + e; $('msg').style.opacity = 1; });
+}
+</script>
+</body>
+</html>

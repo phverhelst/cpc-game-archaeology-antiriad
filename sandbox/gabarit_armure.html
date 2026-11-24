@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tal et l'armure, bac à sable</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+/* VOICE : établi de rétro-ingénierie, précis et calme.
+   IDEA : l'écran du CPC et le pupitre de l'armure : manette des gaz, élan, énergie.
+   PICTURE : la vraie salle du jeu, Tal ou l'armure dedans, sondes visibles ; carte 2 × 2 à côté.
+   COLOUR and TYPE : bleu CPC, jaune pâle, orange de Tal, cyan des sondes ; Plex Sans et Plex Mono.
+   LAYOUT : écran à gauche, pupitre à droite, réglages dessous ; tout s'empile sous 900px. */
+:root{color-scheme:dark;--bg:#00006e;--pan:#0b1690;--pan2:#12209f;--ink:#ffff9a;--dim:#b9b97a;--acc:#ff8a00;--cyan:#38f0ff;--red:#ff5050;--line:#2a3ab8;--ok:#7dff7d}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "IBM Plex Sans",system-ui,sans-serif;overflow-x:clip}
+h1{font-size:clamp(24px,3.2vw,34px);line-height:1.1;margin:0 0 4px;font-weight:600;text-wrap:balance}
+h2{font-size:19px;margin:0 0 10px;font-weight:600}
+p{margin:0 0 10px;max-width:70ch}
+.band{padding:clamp(16px,2.5vw,32px) max(3vw,14px)}
+.tete{display:flex;flex-wrap:wrap;gap:6px 24px;align-items:baseline;justify-content:space-between}
+.tete p{color:var(--dim);font-size:15px}
+.grille{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;align-items:start}
+@media(max-width:900px){.grille{grid-template-columns:minmax(0,1fr)}}
+.ecran{background:#000;border:3px solid var(--line);border-radius:6px;position:relative}
+.ecran canvas{display:block;width:100%;height:auto;aspect-ratio:960/408;image-rendering:pixelated;touch-action:none;cursor:crosshair}
+.survol{position:absolute;right:8px;top:6px;font:13px "IBM Plex Mono",monospace;color:var(--cyan);pointer-events:none;background:#000a;padding:1px 6px;border-radius:3px}
+.message{position:absolute;left:0;right:0;bottom:8px;text-align:center;font:600 15px "IBM Plex Mono",monospace;color:#fff;text-shadow:0 0 6px #000,0 0 2px #000;pointer-events:none;transition:opacity .4s}
+.barre{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-top:12px}
+button,select,input{font:inherit;color:var(--ink)}
+button{background:var(--pan2);border:1px solid var(--line);border-radius:6px;min-height:44px;padding:0 14px;cursor:pointer}
+button:hover{border-color:var(--ink)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+button.on{background:var(--ink);color:var(--bg);font-weight:600}
+label{display:inline-flex;gap:6px;align-items:center;font-size:15px}
+input[type=range]{width:140px;accent-color:var(--acc)}
+input[type=checkbox]{width:20px;height:20px;accent-color:var(--acc)}
+.mono{font-family:"IBM Plex Mono",monospace}
+.panneau{background:var(--pan);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.valeurs{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 12px;font:15px/1.45 "IBM Plex Mono",monospace;margin:0}
+.valeurs dt{color:var(--dim);font-family:"IBM Plex Sans",sans-serif;font-size:14px;padding-top:1px}
+.valeurs dd{margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fl{display:inline-block;width:1.5em;text-align:center;border-radius:3px;color:#5a64b8}
+.fl.on{background:var(--acc);color:#000;font-weight:600}
+.etat{color:var(--acc);font-weight:600}
+.jauge{position:relative;height:16px;background:#000;border:1px solid var(--line);border-radius:3px;overflow:hidden;margin:3px 0 0}
+.jauge i{position:absolute;top:0;bottom:0;background:var(--acc)}
+.jauge.centre::after{content:"";position:absolute;left:50%;top:0;bottom:0;border-left:1px dashed var(--dim)}
+.jauge.en i{background:var(--ok)}.jauge.bas i{background:var(--red)}
+.mode{display:inline-block;padding:2px 10px;border-radius:12px;background:var(--acc);color:#000;font-weight:600;font-size:14px}
+.carte{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:10px 0 0}
+.carte canvas{width:100%;height:auto;aspect-ratio:320/136;image-rendering:pixelated;border:2px solid transparent;border-radius:3px;cursor:pointer}
+.carte canvas.ici{border-color:var(--acc)}
+.carte span{font:12px "IBM Plex Mono",monospace;color:var(--dim)}
+.pad{display:none;gap:6px;margin-top:12px;grid-template-columns:repeat(3,56px) 1fr 96px;grid-template-rows:repeat(2,52px);user-select:none;-webkit-user-select:none}
+.pad button{min-height:0;padding:0;font-size:20px;touch-action:none}
+@media(pointer:coarse){.pad{display:grid}}
+.reglages{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:18px}
+.note{color:var(--dim);font-size:14px}
+kbd{font:13px "IBM Plex Mono",monospace;border:1px solid var(--dim);border-radius:3px;padding:0 5px}
+.legende{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:14px;color:var(--dim);margin-top:8px}
+.legende i{display:inline-block;width:14px;height:10px;margin-right:5px;vertical-align:middle}
+.pieces label{display:flex;margin:6px 0}
+</style>
+</head>
+<body>
+<div class="band">
+  <div class="tete">
+    <h1>Tal et l'armure, bac à sable</h1>
+    <p>The Sacred Armour of Antiriad (Palace, 1986). Quatre vraies salles, modèle vérifié contre le jeu.</p>
+  </div>
+  <div class="grille">
+    <div>
+      <div class="ecran">
+        <canvas id="cv" width="960" height="408" aria-label="Salle du jeu avec Tal"></canvas>
+        <div class="survol" id="survol"></div>
+        <div class="message" id="msg"></div>
+      </div>
+      <div class="pad" id="pad">
+        <span></span><button data-b="1" aria-label="haut">▲</button><span></span><span></span><button data-b="16" aria-label="feu">FEU</button>
+        <button data-b="4" aria-label="gauche">◀</button><button data-b="2" aria-label="bas">▼</button><button data-b="8" aria-label="droite">▶</button><span></span><span></span>
+      </div>
+      <div class="barre">
+        <button id="bPause">Pause</button>
+        <button id="bPas" title="Un tour (touche N), avec les touches tenues">Un tour</button>
+        <button id="bRepartir">Recommencer</button>
+        <label>Cadence <input type="range" id="hz" min="2" max="50" value="17"> <span class="mono" id="hzv">17</span> tours/s</label>
+      </div>
+      <div class="barre">
+        <label><input type="checkbox" id="oSondes" checked> sondes</label>
+        <label><input type="checkbox" id="oTrace" checked> trace</label>
+        <label>Clic sur l'écran : place Tal (ou l'armure qu'il porte)</label>
+      </div>
+      <div class="legende">
+        <span><i style="background:var(--cyan)"></i>sol cherché sous les pieds</span>
+        <span><i style="background:#ffd34d"></i>plafond cherché au-dessus</span>
+        <span><i style="background:var(--red)"></i>test de mur</span>
+      </div>
+    </div>
+    <div class="panneau">
+      <h2>Pupitre <span class="mode" id="mode">à pied</span></h2>
+      <dl class="valeurs" id="val"></dl>
+      <div id="jauges"></div>
+      <div class="carte" id="carte"></div>
+      <p class="note" style="margin-top:6px">Cliquer une salle de la carte y transporte Tal.</p>
+    </div>
+  </div>
+</div>
+
+<div class="band" style="padding-top:0">
+  <div class="reglages">
+    <div class="panneau pieces">
+      <h2>Pièces de l'armure et énergie</h2>
+      <label><input type="checkbox" id="p0" checked> Déplaceur de gravité (&amp;B519) : sans lui, l'armure ne décolle pas</label>
+      <label><input type="checkbox" id="p1"> Rayon pulsar (&amp;B51A) : permet de tirer (le tir n'est pas simulé ici)</label>
+      <label><input type="checkbox" id="p3"> Négateur de particules (&amp;B51C) : divise les dégâts par deux</label>
+      <label><input type="checkbox" id="oDiag"> Saut en diagonale à pied : haut + la direction où Tal regarde, sans le feu (option absente du jeu ; même saut que feu + haut + direction)</label>
+      <div class="barre">
+        <button id="bCoup">Coup reçu</button>
+        <button id="bCellules">Remettre les cellules</button>
+        <button id="bRoute">Tal sur la marche de gauche</button>
+      </div>
+      <p class="note">« Coup reçu » retire à l'armure 8 points d'énergie (4 avec le négateur), comme un contact d'ennemi ; Tal à pied n'est pas concerné ici. Pour ramasser une cellule à pied, Tal doit s'accroupir dessus (<kbd>↓</kbd>) ; dans l'armure, le contact suffit. Une cellule ramassée à pied est consommée dès que Tal est dans l'armure, et remet l'énergie à 31.</p>
+    </div>
+    <div class="panneau">
+      <h2>Commandes</h2>
+      <p class="note">Chemin vers l'armure, selon la disposition du jeu. Le plus simple est de venir d'en haut : depuis une plateforme de la salle &amp;31, sauter vers la droite et se laisser tomber par le bas de la salle ; Tal se pose sur la corniche de l'armure. Depuis le sol de la salle &amp;3F, il faut remonter vers la petite marche tout à gauche et, de là, faire un saut de pied ferme vers la droite (feu + haut + droite). Il ne réussit que depuis trois positions (X &amp;05 à &amp;07) ; à X &amp;04, Tal changerait de salle, et le saut en course est impossible, faute d'élan.</p>
+      <p class="note">À pied, comme dans le premier bac à sable. Pour entrer dans l'armure, il faut la toucher en étant de face (état 01) : à l'arrêt, une brève impulsion dans la direction opposée à son regard fait passer Tal de face, et il y reste si l'on relâche. Pour en sortir, l'armure doit être posée (état &amp;17) : pousser à gauche ou à droite. Il faut ensuite 40 tours avant de pouvoir y rentrer.</p>
+      <p class="note">Dans l'armure, <kbd>↑</kbd> et <kbd>↓</kbd> déplacent la manette des gaz d'un cran par tour ; relâchées, elle revient au neutre et l'armure flotte. <kbd>←</kbd> <kbd>→</kbd> tournent l'armure en deux poses, puis la poussent, et elle glisse jusqu'à 6 tours au relâchement. Elle rebondit sur les murs, le sol et le plafond.</p>
+      <p class="note">Les bords qui ne mènent à aucune salle du carré sont fermés : Tal ou l'armure y est retenu. Dans le jeu, une salle sans voisine renvoie de l'autre côté de la même salle, ce qui peut placer l'armure dans le sol ; et la fosse de la salle &amp;31 mène à une salle hors du carré. Ennemis, tir et mine ne sont pas simulés.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+/*TAL_JS*/
+</script>
+<script>
+/*ARMURE_JS*/
+</script>
+<script>
+{
+const D = /*DONNEES*/;
+const {Modele, nouveauTal, HAUT, BAS, GAUCHE, DROITE, FEU, MONTE, DESCEND, VERS_GAUCHE, VERS_DROITE} = TalModele;
+const OPTS = {sautDiagonal: false};
+const T = D.tables, mp = Modele(T, OPTS), ma = TalArmure.ModeleArmure(T, D.gaz, OPTS);
+const hx = (v, n = 2) => '&' + (v & 0xFFFF).toString(16).toUpperCase().padStart(n, '0');
+const $ = id => document.getElementById(id);
+const NOMS = {1:'de face', 2:'debout', 3:'marche', 4:"s'accroupit", 5:'accroupi', 6:'se relève', 7:'saut', 8:'chute', 9:'réception', 10:'lancer de pierre',
+  0x16:'armure de face', 0x17:'armure posée', 0x18:'se tourne à gauche', 0x19:'armure à gauche', 0x1A:'se tourne à droite', 0x1B:'armure à droite'};
+const nomEtat = e => (e >= 0x16 || e === 1) ? NOMS[e] : (NOMS[e < 0x0B ? e : e - 9] || '?') + (e < 0x0B ? ' (gauche)' : ' (droite)');
+
+// ---- salles
+const SALLES = {};
+for (const r in D.salles) {
+  const s = D.salles[r], bin = atob(s.octets), o = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) o[i] = bin.charCodeAt(i);
+  SALLES[r] = {octets: o, palette: s.palette, liens: s.liens};
+}
+const DANS_CARRE = new Set(D.carre.flat().map(String));
+const ecranDe = r => ({octet: (l, c) => (l >= 0x32 && l < 0xBA && c >= 0 && c < 80) ? SALLES[r].octets[(l - 0x32) * 80 + c] : 0});
+function px0(b){return [((b>>7)&1)|(((b>>3)&1)<<1)|(((b>>5)&1)<<2)|(((b>>1)&1)<<3), ((b>>6)&1)|(((b>>2)&1)<<1)|(((b>>4)&1)<<2)|((b&1)<<3)];}
+function rendreSalle(r, w, h){
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const g = cv.getContext('2d'), s = SALLES[r], sx = w / 160, sy = h / 136;
+  g.fillStyle = s.palette[0]; g.fillRect(0, 0, w, h);
+  for (let l = 0; l < 136; l++) for (let c = 0; c < 80; c++) {
+    const b = s.octets[l * 80 + c]; if (!b) continue;
+    px0(b).forEach((p, i) => { g.fillStyle = s.palette[p]; g.fillRect((c * 2 + i) * sx, l * sy, sx + .5, sy + .5); });
+  }
+  return cv;
+}
+const FONDS = {}; for (const r in SALLES) FONDS[r] = rendreSalle(r, 960, 408);
+
+// ---- état du jeu
+const ARMURE_INIT = {salle: D.armure.salle, x: D.armure.x, y: D.armure.y};
+let salle, tal, dansArmure, armureObj, cellules, delaiRentree, n, trace, joyDernier, message, messageT, pause = false, hz = 17;
+function repartir(){
+  salle = String(ARMURE_INIT.salle);
+  armureObj = {...ARMURE_INIT, salle: String(ARMURE_INIT.salle)};
+  tal = nouveauTal({x: ARMURE_INIT.x - 8, y: ARMURE_INIT.y + 41 - 42, etat: 0x02, sprite: 0x08});   // sur la corniche, à gauche de l'armure
+  dansArmure = false; delaiRentree = 0; n = 0; trace = []; joyDernier = 0;
+  remettreCellules(); dire('');
+}
+function remettreCellules(){ cellules = D.cellules.map(c => ({...c, salle: String(c.salle), prise: false})); }
+function versArmure(){                                          // &60D3 : Tal entre dans l'armure
+  const t = nouveauTal({x: armureObj.x, y: armureObj.y - 1, etat: 0x17, sprite: 0x17, dirs: 0, vy: 0});
+  Object.assign(t, {gaz: 7, glisse: 0, entree: 0, sens_prec: 0, en_vol: 0, phase: 0,
+    energie: tal.energie ?? 0x1F, cellule: tal.cellule ?? 0xFF, deplaceur: $('p0').checked ? 0 : 0xFF});
+  tal = t; dansArmure = true; armureObj = null; trace = [];
+}
+function horsArmure(){                                          // &6150 : sortie, l'armure reste posée
+  armureObj = {salle, x: tal.x, y: tal.y + 1};
+  const garde = {energie: tal.energie, cellule: tal.cellule};
+  tal = nouveauTal({x: tal.x, y: tal.y, etat: 0x01, sprite: 0x09, dirs: DESCEND, vy: 0});
+  Object.assign(tal, garde);
+  dansArmure = false; delaiRentree = 0x28; trace = [];
+}
+function chevauche(a, b){                                       // &5953 : rectangles de Tal (a) et d'un objet (b)
+  const dx = Math.abs(a.x - b.x), lx = 2 * (a.x >= b.x ? b.dl : a.demi_largeur);
+  if (dx >= lx) return false;
+  const dy = Math.abs(a.y - b.y), ly = a.y >= b.y ? b.h : a.hauteur;
+  return dy < ly;
+}
+const MSG = D.messages;
+function dire(t){ if (t !== message) { message = t; messageT = performance.now(); } }
+
+function changerSalle(avant){                                   // &69A7
+  const L = SALLES[salle].liens; let cote = null, nouv;
+  if (tal.x < 5) { cote = 'gauche'; nouv = () => { tal.x = 0x44; }; }
+  else if (tal.x >= 0x45) { cote = 'droite'; nouv = () => { tal.x = 6; }; }
+  else if (tal.y < 0x19) { cote = 'haut'; nouv = () => { tal.y = 0x99; }; }
+  else if (tal.y >= 0x9B) { cote = 'bas'; nouv = () => { tal.y = 0x1B; }; }
+  if (!cote) return;
+  const cible = String(L[cote]);
+  if (L[cote] !== 255 && DANS_CARRE.has(cible)) { salle = cible; nouv(); trace = []; return; }
+  // Bord fermé dans le bac à sable : le jeu renverrait de l'autre côté de la même salle (voisine &FF)
+  // ou vers une salle hors du carré ; ici, Tal ou l'armure est retenu à sa position du tour précédent.
+  tal.x = avant.x; tal.y = avant.y;
+  dire(L[cote] === 255 ? 'Bord sans salle voisine (fermé ici)' : 'Bord du carré : salle ' + hx(L[cote]) + ' non chargée');
+}
+
+function tick(joy){
+  joyDernier = joy;
+  const avant = {x: tal.x, y: tal.y};
+  const ecran = ecranDe(salle);
+  if (dansArmure) {
+    if (tal.deplaceur && (joy & HAUT)) dire(MSG[0x0D]);
+    ma.tour(tal, joy, ecran);
+    if (tal.energie === 0) dire(MSG[0x10]); else if (tal.energie < 7) dire(MSG[0x0F]);
+    if ((joy & FEU) && (tal.etat & 0x7F) in {0x19: 1, 0x1B: 1} && !$('p1').checked) dire(MSG[0x0E]);
+    if ((tal.etat & 0x7F) === 0x17 && (joy & 0x0C)) horsArmure();      // &6150, juste après &5744
+  } else {
+    mp.tour(tal, joy, ecran);
+  }
+  if (delaiRentree) delaiRentree--;
+  // contacts (&5933, &59B5)
+  const S = D.sprites;
+  // ramassage (&5D85) : dans l'armure au contact ; à pied, seulement en s'accroupissant (états &04, &0D)
+  const peutRamasser = dansArmure || [0x04, 0x0D].includes(tal.etat & 0x7F);
+  for (const c of cellules) if (peutRamasser && !c.prise && c.salle === salle && chevauche(tal, {x: c.x, y: c.y, dl: S[0x1C].dl, h: S[0x1C].l.length})) {
+    if ((tal.cellule ?? 0xFF) !== 0) {
+      c.prise = true; dire(MSG[0x0C]);
+      if (dansArmure) { tal.cellule = 0xFF; tal.energie = 0x1F; } else tal.cellule = 0;
+    }
+  }
+  if (!dansArmure && armureObj && armureObj.salle === salle && !delaiRentree && (tal.etat & 0x7F) === 1
+      && chevauche(tal, {x: armureObj.x, y: armureObj.y, dl: S[0x65].dl, h: S[0x65].l.length})) versArmure();
+  changerSalle(avant);
+  n++;
+  trace.push({x: tal.x, y: tal.y + tal.hauteur, a: dansArmure}); if (trace.length > 200) trace.shift();
+}
+
+// ---- entrées
+let tenu = 0;
+const TOUCHES = {ArrowUp: HAUT, ArrowDown: BAS, ArrowLeft: GAUCHE, ArrowRight: DROITE, ' ': FEU};
+addEventListener('keydown', ev => {
+  if (ev.target.tagName === 'INPUT' || ev.target.tagName === 'SELECT') return;
+  if (TOUCHES[ev.key]) { tenu |= TOUCHES[ev.key]; ev.preventDefault(); return; }
+  const k = ev.key.toLowerCase();
+  if (k === 'p') basculerPause(); else if (k === 'n') unTour();
+});
+addEventListener('keyup', ev => { if (TOUCHES[ev.key]) tenu &= ~TOUCHES[ev.key]; });
+addEventListener('blur', () => { tenu = 0; });
+document.querySelectorAll('#pad button').forEach(b => {
+  const v = +b.dataset.b;
+  b.addEventListener('pointerdown', ev => { tenu |= v; b.classList.add('on'); b.setPointerCapture(ev.pointerId); ev.preventDefault(); });
+  const lache = () => { tenu &= ~v; b.classList.remove('on'); };
+  b.addEventListener('pointerup', lache); b.addEventListener('pointercancel', lache);
+});
+function basculerPause(){ pause = !pause; $('bPause').textContent = pause ? 'Reprendre' : 'Pause'; $('bPause').classList.toggle('on', pause); }
+function unTour(){ if (!pause) basculerPause(); tick(tenu); }
+$('bPause').onclick = basculerPause; $('bPas').onclick = unTour; $('bRepartir').onclick = repartir;
+$('hz').oninput = ev => { hz = +ev.target.value; $('hzv').textContent = hz; };
+$('p0').onchange = () => { if (dansArmure) tal.deplaceur = $('p0').checked ? 0 : 0xFF; if ($('p0').checked) dire(MSG[0x08]); };
+$('p1').onchange = () => { if ($('p1').checked) dire(MSG[0x09]); };
+$('p3').onchange = () => { if ($('p3').checked) dire(MSG[0x0A]); };
+$('bCoup').onclick = () => { if (dansArmure) tal.energie = Math.max(0, tal.energie - ($('p3').checked ? 4 : 8)); };
+$('bCellules').onclick = remettreCellules;
+$('oDiag').onchange = ev => { OPTS.sautDiagonal = ev.target.checked; };
+$('bRoute').onclick = () => {                                   // petite marche à gauche de la salle &3F
+  if (dansArmure) horsArmure();
+  salle = '63'; tal = Object.assign(nouveauTal({x: 0x06, y: 0x67, etat: 0x0B, sprite: 0x88}), {energie: tal.energie, cellule: tal.cellule}); trace = [];
+};
+
+const cv = $('cv'), g = cv.getContext('2d');
+function sousPointeur(ev){
+  const r = cv.getBoundingClientRect();
+  return {col: Math.max(0, Math.min(79, Math.floor((ev.clientX - r.left) / r.width * 80))),
+          ligne: Math.max(0x32, Math.min(0xB9, 0x32 + Math.floor((ev.clientY - r.top) / r.height * 136)))};
+}
+cv.addEventListener('pointermove', ev => { const p = sousPointeur(ev); $('survol').textContent = 'salle ' + hx(+salle) + '  col ' + hx(p.col) + '  ligne ' + hx(p.ligne); });
+cv.addEventListener('pointerleave', () => { $('survol').textContent = ''; });
+cv.addEventListener('pointerdown', ev => {
+  const p = sousPointeur(ev);
+  tal.x = Math.min(p.col, 0x49); tal.y = Math.max(0x19, p.ligne - tal.hauteur); tal.vy = 0; trace = [];
+  if (dansArmure) { tal.gaz = 7; tal.glisse = 0; tal.dirs = 0; }
+  else { tal.dirs = DESCEND; tal.saut = 0; tal.etat = (tal.sprite & 0x80) ? 0x0B : 0x02; tal.pas = 0; tal.attente = 0; }
+});
+
+// ---- carte 2 × 2
+const MINI = {};
+$('carte').innerHTML = D.carre.flat().map(r => `<div><canvas data-r="${r}" width="320" height="136"></canvas><span>salle ${hx(r)}</span></div>`).join('');
+document.querySelectorAll('#carte canvas').forEach(c => {
+  c.getContext('2d').drawImage(rendreSalle(c.dataset.r, 320, 136), 0, 0); MINI[c.dataset.r] = c;
+  c.onclick = () => { salle = c.dataset.r; trace = []; };
+});
+
+// ---- dessin
+function dessinerSprite(id, x, y, miroir, alpha){
+  const s = D.sprites[id & 0x7F]; if (!s) return;
+  const pal = SALLES[salle].palette; g.globalAlpha = alpha ?? 1;
+  s.l.forEach((ligne, yy) => {
+    for (let i = 0; i < ligne.length; i++) {
+      const c = ligne[miroir ? ligne.length - 1 - i : i]; if (c === '.') continue;
+      g.fillStyle = pal[parseInt(c, 16)]; g.fillRect(x * 12 + i * 6, (y - 0x32) * 3 + yy * 3, 6, 3);
+    }
+  });
+  g.globalAlpha = 1;
+}
+function dessinerSondes(t){
+  const e = t.etat & 0x7F;
+  if (dansArmure) {
+    g.fillStyle = 'rgba(56,240,255,.35)'; g.fillRect(t.x * 12, (t.y + t.hauteur + 1 - 0x32) * 3, 72, (t.vy + 1) * 3);
+    g.fillStyle = 'rgba(255,211,77,.35)'; g.fillRect(t.x * 12 + 12, (t.y + 3 - t.vy - 0x32) * 3, 48, (t.vy + 1) * 3);
+  } else if (!(t.dirs & MONTE)) {
+    g.fillStyle = 'rgba(56,240,255,.35)'; g.fillRect(t.x * 12, (t.y + t.hauteur + 1 - 0x32) * 3, 72, Math.max(1, T.vitesses[t.saut]) * 3);
+  }
+  const h = t.dirs & 0x0C;
+  if (T.etats_mur.includes(e) && h) {
+    const col = (h & VERS_DROITE) ? t.x + 7 : t.x - 1, lignes = dansArmure ? 0x26 : 0x23;
+    if (col >= 0 && col < 80) {
+      g.strokeStyle = '#ff5050'; g.lineWidth = 2; g.strokeRect(col * 12 + 1, (t.y + 4 - 0x32) * 3, 10, lignes * 3);
+      if (t.mur === 0) { g.fillStyle = 'rgba(255,80,80,.55)'; g.fillRect(col * 12 + 1, (t.y + 4 - 0x32) * 3, 10, lignes * 3); }
+    }
+  }
+}
+function dessiner(){
+  g.drawImage(FONDS[salle], 0, 0);
+  for (const c of cellules) if (!c.prise && c.salle === salle) dessinerSprite(0x1C, c.x, c.y, false);
+  if (armureObj && armureObj.salle === salle) dessinerSprite(0x65, armureObj.x, armureObj.y, false, delaiRentree ? .6 : 1);
+  if ($('oTrace').checked) trace.forEach(p => { g.fillStyle = p.a ? '#38f0ff' : '#ff8a00'; g.fillRect(p.x * 12 + 33, (p.y - 0x32) * 3 - 1, 6, 4); });
+  dessinerSprite(tal.sprite, tal.x, tal.y, tal.sprite & 0x80);
+  if ($('oSondes').checked) dessinerSondes(tal);
+  const age = performance.now() - messageT;
+  $('msg').textContent = message || ''; $('msg').style.opacity = message && age < 3500 ? 1 : 0;
+}
+
+// ---- pupitre
+const fl = (on, s) => `<span class="fl ${on ? 'on' : ''}">${s}</span>`;
+const jauge = (titre, v, min, max, cls, centre) => {
+  const p = (v - min) / (max - min) * 100, z = centre ? 50 : 0;
+  return `<dt>${titre}</dt><dd><div class="jauge ${cls} ${centre ? 'centre' : ''}"><i style="left:${Math.min(z, p)}%;width:${Math.abs(p - z)}%"></i></div></dd>`;
+};
+function majPupitre(){
+  const t = tal, e = t.etat & 0x7F, j = joyDernier;
+  $('mode').textContent = dansArmure ? "dans l'armure" : 'à pied';
+  const rows = [
+    ['Salle', hx(+salle) + '   tour ' + n + (pause ? ' (pause)' : '')],
+    ['Joystick', fl(j & HAUT, '↑') + fl(j & BAS, '↓') + fl(j & GAUCHE, '←') + fl(j & DROITE, '→') + fl(j & FEU, 'F')],
+    ['État', `<span class="etat">${hx(e)}</span> ${nomEtat(e)}${t.etat & 0x80 ? ', fini' : ''}`],
+    ['X, Y', `${hx(t.x)}, ${hx(t.y)}`],
+    ['Directions', fl(t.dirs & MONTE, '↑') + fl(t.dirs & DESCEND, '↓') + fl(t.dirs & VERS_GAUCHE, '←') + fl(t.dirs & VERS_DROITE, '→')],
+    ['Vitesses', `vx ${t.vx}, vy ${t.vy}`],
+  ];
+  if (dansArmure) rows.push(['Gaz &B51D', `cran ${t.gaz} → ${D.gaz[t.gaz & 0x7F][0] & 1 ? 'monte ' : D.gaz[t.gaz & 0x7F][0] & 2 ? 'descend ' : 'neutre '}${D.gaz[t.gaz & 0x7F][1]}`],
+                            ['Glisse &B51E', `${t.glisse} tour(s)`], ['En vol &B500', t.en_vol ? 'oui' : 'au contact'],
+                            ['Énergie &B4FD', `${t.energie} / 31`]);
+  rows.push(['Cellule', (t.cellule ?? 0xFF) === 0 ? 'portée' : 'aucune']);
+  if (!dansArmure && delaiRentree) rows.push(['Rentrée', `dans ${delaiRentree} tours`]);
+  $('val').innerHTML = rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
+  $('jauges').innerHTML = dansArmure ? '<dl class="valeurs" style="margin-top:8px">' +
+    jauge('Gaz (−4 à +4)', 7 - Math.min(t.gaz, 14), -7, 7, '', true) + jauge('Élan', t.glisse, 0, 6, '', false) +
+    jauge('Énergie', t.energie, 0, 31, t.energie < 7 ? 'bas' : 'en', false) + '</dl>' : '';
+  for (const r in MINI) MINI[r].classList.toggle('ici', r === salle);
+}
+
+let acc = 0, prec = 0;
+function boucle(tm){
+  const dt = Math.min(250, tm - prec); prec = tm;
+  if (!pause) { acc += dt; let k = 0; while (acc >= 1000 / hz && k++ < 6) { tick(tenu); acc -= 1000 / hz; } if (k >= 6) acc = 0; }
+  dessiner(); majPupitre();
+  requestAnimationFrame(boucle);
+}
+repartir();
+requestAnimationFrame(tm => { prec = tm; boucle(tm); });
+}
+</script>
+</body>
+</html>

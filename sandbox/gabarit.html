@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tal, bac à sable</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+/* VOICE : établi de rétro-ingénierie, précis et calme.
+   IDEA : l'écran bleu et jaune de l'Amstrad CPC, avec un pupitre de mesure à côté.
+   PICTURE : la salle d'essai au format d'origine, Tal dedans, sondes de collision visibles.
+   COLOUR and TYPE : bleu CPC, jaune pâle du texte firmware, orange de Tal ; Plex Sans et Plex Mono pour les valeurs.
+   LAYOUT : écran en haut à gauche, valeurs à droite, réglages dessous ; tout s'empile sous 900px. */
+:root{color-scheme:dark;--bg:#00006e;--pan:#0b1690;--pan2:#12209f;--ink:#ffff9a;--dim:#b9b97a;--acc:#ff8a00;--cyan:#38f0ff;--red:#ff5050;--line:#2a3ab8}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "IBM Plex Sans",system-ui,sans-serif;overflow-x:clip}
+h1{font-size:clamp(24px,3.2vw,34px);line-height:1.1;margin:0 0 4px;font-weight:600;text-wrap:balance}
+h2{font-size:19px;margin:0 0 10px;font-weight:600}
+p{margin:0 0 10px;max-width:70ch}
+.band{padding:clamp(16px,2.5vw,32px) max(3vw,14px)}
+.tete{display:flex;flex-wrap:wrap;gap:6px 24px;align-items:baseline;justify-content:space-between}
+.tete p{color:var(--dim);font-size:15px}
+.grille{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px;align-items:start}
+@media(max-width:900px){.grille{grid-template-columns:minmax(0,1fr)}}
+.ecran{background:#000;border:3px solid var(--line);border-radius:6px;padding:0;position:relative}
+.ecran canvas{display:block;width:100%;height:auto;aspect-ratio:960/408;image-rendering:pixelated;touch-action:none;cursor:crosshair}
+.survol{position:absolute;right:8px;top:6px;font:13px "IBM Plex Mono",monospace;color:var(--cyan);pointer-events:none;background:#000a;padding:1px 6px;border-radius:3px}
+.barre{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-top:12px}
+button,select,input{font:inherit;color:var(--ink)}
+button{background:var(--pan2);border:1px solid var(--line);border-radius:6px;min-height:44px;padding:0 14px;cursor:pointer}
+button:hover{border-color:var(--ink)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+button.on{background:var(--ink);color:var(--bg);font-weight:600}
+label{display:inline-flex;gap:6px;align-items:center;font-size:15px}
+input[type=range]{width:150px;accent-color:var(--acc)}
+input[type=number]{width:58px;min-height:36px;background:#000;border:1px solid var(--line);border-radius:4px;padding:2px 4px;font:15px "IBM Plex Mono",monospace;text-align:right}
+input[type=checkbox]{width:20px;height:20px;accent-color:var(--acc)}
+.mono{font-family:"IBM Plex Mono",monospace}
+.panneau{background:var(--pan);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.valeurs{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 12px;font:15px/1.45 "IBM Plex Mono",monospace;margin:0}
+.valeurs dt{color:var(--dim);font-family:"IBM Plex Sans",sans-serif;font-size:14px;padding-top:1px}
+.valeurs dd{margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fl{display:inline-block;width:1.5em;text-align:center;border-radius:3px;color:#5a64b8}
+.fl.on{background:var(--acc);color:#000;font-weight:600}
+.etat{color:var(--acc);font-weight:600}
+.pad{display:none;gap:6px;margin-top:12px;grid-template-columns:repeat(3,56px) 1fr 96px;grid-template-rows:repeat(2,52px);user-select:none;-webkit-user-select:none}
+.pad button{min-height:0;padding:0;font-size:20px;touch-action:none}
+@media(pointer:coarse){.pad{display:grid}}
+.pad.force{display:grid}
+.reglages{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:18px}
+.vit{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px}
+.vit label{flex-direction:column;gap:2px;font:12px "IBM Plex Mono",monospace;color:var(--dim)}
+.vit label.cur{color:var(--acc)}
+.vit label.cur input{border-color:var(--acc)}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{padding:5px 6px;border-bottom:1px solid var(--line);text-align:left}
+th{color:var(--dim);font-weight:400;font-size:14px}
+td.n{text-align:right}
+.modif{color:var(--acc)}
+.note{color:var(--dim);font-size:14px}
+kbd{font:13px "IBM Plex Mono",monospace;border:1px solid var(--dim);border-radius:3px;padding:0 5px}
+.legende{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:14px;color:var(--dim);margin-top:8px}
+.legende i{display:inline-block;width:14px;height:10px;margin-right:5px;vertical-align:middle}
+#copie{min-height:20px;font-size:14px;color:var(--cyan)}
+</style>
+</head>
+<body>
+<div class="band">
+  <div class="tete">
+    <h1>Tal à pied, bac à sable du mouvement</h1>
+    <p>The Sacred Armour of Antiriad (Palace, 1986). Modèle transcrit du code Z80, vérifié contre le jeu.</p>
+  </div>
+
+  <div class="grille">
+    <div>
+      <div class="ecran">
+        <canvas id="cv" width="960" height="408" aria-label="Salle d'essai avec Tal"></canvas>
+        <div class="survol" id="survol"></div>
+      </div>
+      <div class="pad" id="pad">
+        <span></span><button data-b="1" aria-label="haut">▲</button><span></span><span></span><button data-b="16" aria-label="feu">FEU</button>
+        <button data-b="4" aria-label="gauche">◀</button><button data-b="2" aria-label="bas">▼</button><button data-b="8" aria-label="droite">▶</button><span></span><span></span>
+      </div>
+      <div class="barre">
+        <button id="bPause">Pause</button>
+        <button id="bPas" title="Un tour (touche N), avec les touches tenues">Un tour</button>
+        <button id="bReplacer">Replacer Tal</button>
+        <label>Cadence <input type="range" id="hz" min="2" max="50" value="17"> <span class="mono" id="hzv">17</span> tours/s</label>
+      </div>
+      <div class="barre">
+        <label><input type="checkbox" id="oSondes" checked> sondes de collision</label>
+        <label><input type="checkbox" id="oTrace" checked> trace</label>
+        <label><input type="checkbox" id="oGrille"> grille des cases</label>
+        <label>Clic sur l'écran <select id="mode"><option value="tal">place Tal</option><option value="salle">modifie la salle</option></select></label>
+      </div>
+      <div class="legende">
+        <span><i style="background:var(--cyan)"></i>recherche du sol (sous les pieds, sur la vitesse du tour)</span>
+        <span><i style="background:var(--red)"></i>test de mur (rouge plein : mur trouvé)</span>
+        <span><i style="background:#ff8a00"></i>pieds, un point par tour</span>
+      </div>
+    </div>
+
+    <div class="panneau">
+      <h2>Valeurs de Tal</h2>
+      <dl class="valeurs" id="val"></dl>
+      <h2 style="margin-top:16px">Dernier saut ou chute</h2>
+      <dl class="valeurs" id="saut"><dt>—</dt><dd>sauter avec <kbd>↑</kbd>, ou <kbd>espace</kbd> en marchant</dd></dl>
+    </div>
+  </div>
+</div>
+
+<div class="band" style="padding-top:0">
+  <div class="reglages">
+    <div class="panneau">
+      <h2>Table des vitesses verticales (&amp;8EC2)</h2>
+      <p class="note">Lignes par tour selon l'index &amp;B498. La montée lit la table de &amp;0B vers 1, la chute de 0 vers &amp;10. L'index utilisé au dernier tour est en orange.</p>
+      <div class="vit" id="vit"></div>
+      <div class="barre"><label>Vitesse horizontale (+8) <input type="number" id="vx" min="0" max="8" value="1"> octet(s) par tour</label></div>
+      <div class="barre"><label><input type="checkbox" id="oDiag"> Saut en diagonale : haut + la direction où Tal regarde, sans le feu (option absente du jeu)</label></div>
+    </div>
+    <div class="panneau">
+      <h2>Animations et blocages</h2>
+      <p class="note">Délai : tours d'attente entre deux images. Bloquant : l'état refuse toute commande tant que son animation n'est pas finie (bit 4 du masque, &amp;8F4B). Réglé pour les deux sens à la fois.</p>
+      <table><thead><tr><th>États</th><th>Rôle</th><th>Délai</th><th>Bloquant</th></tr></thead><tbody id="anims"></tbody></table>
+    </div>
+    <div class="panneau">
+      <h2>Réglages et salle</h2>
+      <p id="etatReg" class="note"></p>
+      <div class="barre">
+        <button id="bOrig">Revenir aux valeurs d'origine</button>
+        <button id="bCopieT">Copier les tables (JSON)</button>
+      </div>
+      <div class="barre">
+        <button id="bSalle">Salle d'essai d'origine</button>
+        <button id="bVider">Vider la salle</button>
+        <button id="bCopieS">Copier le plan</button>
+      </div>
+      <p id="copie"></p>
+      <h2 style="margin-top:10px">Commandes</h2>
+      <p class="note"><kbd>←</kbd> <kbd>→</kbd> marcher, <kbd>↑</kbd> saut vertical, <kbd>↓</kbd> s'accroupir, <kbd>espace</kbd> lancer de pierre (la pierre n'est pas simulée ici), ou saut en course en marchant, <kbd>espace</kbd> + <kbd>↑</kbd> + direction : saut de pied ferme. <kbd>P</kbd> pause, <kbd>N</kbd> un tour, <kbd>R</kbd> replacer.</p>
+      <p class="note">En mode « modifie la salle », un clic fait tourner la case : vide, plateforme, bloc. Les plateformes ne sont reconnues que sur la grille de 8 lignes, comme dans le jeu ; Tal les traverse par en dessous, seul le haut de l'écran arrête un saut.</p>
+      <p class="note">Ce que la page ne montre pas : changement de salle, ennemis, armure. Les sprites viennent du jeu ; la salle est une salle d'essai, faite avec les mêmes règles de collision.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+/*TAL_JS*/
+</script>
+<script>
+{
+const D = /*DONNEES*/;
+const {Modele, nouveauTal, HAUT, BAS, GAUCHE, DROITE, FEU, MONTE, DESCEND, VERS_GAUCHE, VERS_DROITE} = TalModele;
+const copie = o => JSON.parse(JSON.stringify(o));
+const ORIG = copie(D.tables), T = copie(D.tables);
+const OPTS = {sautDiagonal: false};
+const m = Modele(T, OPTS);
+const hx = (v, n = 2) => '&' + v.toString(16).toUpperCase().padStart(n, '0');
+const NOMS = {1:'de face', 2:'debout', 3:'marche', 4:"s'accroupit", 5:'accroupi', 6:'se relève', 7:'saut', 8:'chute', 9:'réception', 10:'lancer de pierre'};
+const nomEtat = e => e === 1 ? NOMS[1] : (NOMS[e < 0x0B ? e : e - 9] || '?') + (e < 0x0B ? ' (gauche)' : ' (droite)');
+const CLASSES = ['rien', 'haut', 'droite', 'bas', 'gauche', 'feu'];
+const EN_L_AIR = [7, 8, 0x10, 0x11];
+
+// ---- salle
+let plan = D.plan.map(r => r.split(''));
+const buf = new Uint8Array(256 * 80);
+const ecran = {octet: (l, c) => (l >= 0 && l < 256 && c >= 0 && c < 80) ? buf[l * 80 + c] : 0};
+const fond = document.createElement('canvas'); fond.width = 960; fond.height = 408;
+function px0(b){return [((b>>7)&1)|(((b>>3)&1)<<1)|(((b>>5)&1)<<2)|(((b>>1)&1)<<3), ((b>>6)&1)|(((b>>2)&1)<<1)|(((b>>4)&1)<<2)|((b&1)<<3)];}
+function construireSalle(){
+  buf.fill(0);
+  plan.forEach((r, i) => r.forEach((k, j) => D.octets_case[k].forEach((b, l) => {
+    for (let o = 0; o < 4; o++) buf[(0x32 + i * 8 + l) * 80 + j * 4 + o] = b;
+  })));
+  const g = fond.getContext('2d'); g.fillStyle = D.palette[0]; g.fillRect(0, 0, 960, 408);
+  for (let l = 0x32; l < 0xBA; l++) for (let c = 0; c < 80; c++) {
+    const b = buf[l * 80 + c]; if (!b) continue;
+    px0(b).forEach((p, i) => { g.fillStyle = D.palette[p]; g.fillRect(c * 12 + i * 6, (l - 0x32) * 3, 6, 3); });
+  }
+}
+
+// ---- Tal
+let reglageVx = 1;
+const departTal = () => nouveauTal({x: 0x20, y: 0xB2 - 0x2A - 1, etat: 0x02, sprite: 0x08, vx: reglageVx});
+let tal = departTal(), n = 0, trace = [], joyDernier = 0, dernierSaut = null, enCours = null, reprise = null;
+function tick(joy){
+  const avant = {x: tal.x, y: tal.y, e: tal.etat & 0x7F};
+  const index = tal.saut;
+  m.tour(tal, joy, ecran);
+  n++; joyDernier = joy; indexUtilise = index;
+  const e = tal.etat & 0x7F;
+  trace.push({x: tal.x, y: tal.y + tal.hauteur, e}); if (trace.length > 240) trace.shift();
+  if (!enCours && EN_L_AIR.includes(e) && !EN_L_AIR.includes(avant.e))
+    enCours = {type: (e === 7 || e === 0x10) ? 'saut' : 'chute', t: n, x0: avant.x, y0: avant.y, ymin: tal.y};
+  if (enCours) {
+    enCours.ymin = Math.min(enCours.ymin, tal.y);
+    if (!EN_L_AIR.includes(e)) {
+      dernierSaut = {type: enCours.type, hauteur: enCours.y0 - enCours.ymin, chute: tal.y - enCours.ymin,
+                     duree: n - enCours.t, portee: Math.abs(tal.x - enCours.x0), reprise: null};
+      enCours = null; reprise = n;
+    }
+  }
+  if (reprise !== null && dernierSaut && (e === 2 || e === 0x0B)) { dernierSaut.reprise = n - reprise; reprise = null; }
+}
+let indexUtilise = 0;
+
+// ---- entrées
+let tenu = 0;
+const TOUCHES = {ArrowUp: HAUT, ArrowDown: BAS, ArrowLeft: GAUCHE, ArrowRight: DROITE, ' ': FEU};
+addEventListener('keydown', ev => {
+  if (ev.target.tagName === 'INPUT' || ev.target.tagName === 'SELECT') return;
+  if (TOUCHES[ev.key]) { tenu |= TOUCHES[ev.key]; ev.preventDefault(); return; }
+  const k = ev.key.toLowerCase();
+  if (k === 'p') basculerPause(); else if (k === 'n') unTour(); else if (k === 'r') replacer();
+});
+addEventListener('keyup', ev => { if (TOUCHES[ev.key]) tenu &= ~TOUCHES[ev.key]; });
+addEventListener('blur', () => { tenu = 0; });
+document.querySelectorAll('#pad button').forEach(b => {
+  const v = +b.dataset.b;
+  b.addEventListener('pointerdown', ev => { tenu |= v; b.classList.add('on'); b.setPointerCapture(ev.pointerId); ev.preventDefault(); });
+  const lache = () => { tenu &= ~v; b.classList.remove('on'); };
+  b.addEventListener('pointerup', lache); b.addEventListener('pointercancel', lache);
+});
+
+// ---- commandes
+let pause = false, hz = 17, acc = 0, prec = 0;
+const $ = id => document.getElementById(id);
+function basculerPause(){ pause = !pause; $('bPause').textContent = pause ? 'Reprendre' : 'Pause'; $('bPause').classList.toggle('on', pause); }
+function unTour(){ if (!pause) basculerPause(); tick(tenu); }
+function replacer(){ tal = departTal(); trace = []; enCours = null; reprise = null; }
+$('bPause').onclick = basculerPause; $('bPas').onclick = unTour; $('bReplacer').onclick = replacer;
+$('hz').oninput = ev => { hz = +ev.target.value; $('hzv').textContent = hz; };
+
+const cv = $('cv'), g = cv.getContext('2d');
+function sousPointeur(ev){
+  const r = cv.getBoundingClientRect();
+  const col = Math.floor((ev.clientX - r.left) / r.width * 80), ligne = 0x32 + Math.floor((ev.clientY - r.top) / r.height * 136);
+  return {col: Math.max(0, Math.min(79, col)), ligne: Math.max(0x32, Math.min(0xB9, ligne))};
+}
+cv.addEventListener('pointermove', ev => { const p = sousPointeur(ev); $('survol').textContent = 'col ' + hx(p.col) + '  ligne ' + hx(p.ligne); });
+cv.addEventListener('pointerleave', () => { $('survol').textContent = ''; });
+cv.addEventListener('pointerdown', ev => {
+  const p = sousPointeur(ev);
+  if ($('mode').value === 'salle') {
+    const r = Math.floor((p.ligne - 0x32) / 8), c = Math.floor(p.col / 4);
+    const cycle = {'.': '=', '=': '#', '#': '.'};
+    plan[r][c] = cycle[plan[r][c]]; construireSalle();
+  } else {
+    const droite = tal.sprite & 0x80;
+    tal.x = Math.min(p.col, 0x49); tal.y = Math.max(0, p.ligne - tal.hauteur);
+    tal.dirs = DESCEND; tal.saut = 0; tal.vy = 0;
+    tal.etat = droite ? 0x0B : 0x02; tal.pas = 0; tal.attente = 0;
+    trace = []; enCours = null;
+  }
+});
+
+// ---- réglages
+const PAIRES = [[1], [2, 0x0B], [3, 0x0C], [4, 0x0D], [5, 0x0E], [6, 0x0F], [7, 0x10], [8, 0x11], [9, 0x12], [0x0A, 0x13]];
+function construireReglages(){
+  $('vit').innerHTML = T.vitesses.map((v, i) => `<label id="vl${i}">${hx(i)}<input type="number" min="0" max="40" value="${v}" data-i="${i}"></label>`).join('');
+  $('vit').querySelectorAll('input').forEach(inp => inp.oninput = () => { T.vitesses[+inp.dataset.i] = Math.max(0, Math.min(40, +inp.value || 0)); majReg(); });
+  $('vx').value = reglageVx;
+  $('anims').innerHTML = PAIRES.map(p => {
+    const a = T.animations[p[0]], bl = T.transitions[p[0]][1] & 0x10;
+    return `<tr><td class="mono">${p.map(e => hx(e)).join(' / ')}</td><td>${p[0] === 1 ? NOMS[1] : NOMS[p[0]]}</td>
+      <td><input type="number" min="0" max="60" value="${a.delai}" data-p="${p.join(',')}" data-k="d"></td>
+      <td><input type="checkbox" ${bl ? 'checked' : ''} data-p="${p.join(',')}" data-k="b" aria-label="bloquant"></td></tr>`;
+  }).join('');
+  $('anims').querySelectorAll('input').forEach(inp => inp.oninput = () => {
+    inp.dataset.p.split(',').map(Number).forEach(e => {
+      if (inp.dataset.k === 'd') T.animations[e].delai = Math.max(0, Math.min(60, +inp.value || 0));
+      else T.transitions[e][1] = inp.checked ? T.transitions[e][1] | 0x10 : T.transitions[e][1] & ~0x10;
+    });
+    majReg();
+  });
+  majReg();
+}
+$('oDiag').onchange = ev => { OPTS.sautDiagonal = ev.target.checked; majReg(); };
+$('vx').oninput = ev => { reglageVx = tal.vx = Math.max(0, Math.min(8, +ev.target.value || 0)); majReg(); };
+function ecartsReglages(){
+  let k = T.vitesses.filter((v, i) => v !== ORIG.vitesses[i]).length;
+  for (const e in T.animations) { if (T.animations[e].delai !== ORIG.animations[e].delai) k++; if (T.transitions[e][1] !== ORIG.transitions[e][1]) k++; }
+  if (reglageVx !== 1) k++;
+  if (OPTS.sautDiagonal) k++;
+  return k;
+}
+function majReg(){
+  const k = ecartsReglages();
+  $('etatReg').innerHTML = k ? `<span class="modif">Modifié : ${k} valeur(s) diffèrent du jeu d'origine.</span> Le comportement n'est plus celui du jeu.` : "Valeurs d'origine du jeu : le comportement est celui de l'Amstrad.";
+  T.vitesses.forEach((v, i) => { const l = $('vl' + i); if (l) l.classList.toggle('modif', v !== ORIG.vitesses[i]); });
+}
+$('bOrig').onclick = () => {
+  const o = copie(ORIG);
+  T.vitesses.splice(0, 17, ...o.vitesses);
+  for (const e in o.animations) { T.animations[e].delai = o.animations[e].delai; T.transitions[e][1] = o.transitions[e][1]; }
+  reglageVx = tal.vx = 1; OPTS.sautDiagonal = false; $('oDiag').checked = false; construireReglages();
+};
+async function copier(texte, quoi){
+  try { await navigator.clipboard.writeText(texte); $('copie').textContent = quoi + ' copié(es) dans le presse-papiers.'; }
+  catch (e) { $('copie').textContent = "Copie refusée par le navigateur."; }
+}
+$('bCopieT').onclick = () => copier(JSON.stringify({vitesses: T.vitesses, vx: reglageVx,
+  animations: Object.fromEntries(Object.entries(T.animations).map(([e, a]) => [hx(+e), {delai: a.delai, bloquant: !!(T.transitions[e][1] & 0x10)}]))}, null, 1), 'Tables');
+$('bCopieS').onclick = () => copier(plan.map(r => r.join('')).join('\n'), 'Plan');
+$('bSalle').onclick = () => { plan = D.plan.map(r => r.split('')); construireSalle(); };
+$('bVider').onclick = () => { plan = D.plan.map((r, i) => (i === D.plan.length - 1 ? r : '.'.repeat(r.length)).split('')); construireSalle(); };
+
+// ---- dessin
+const COUL_ETAT = e => EN_L_AIR.includes(e) ? '#38f0ff' : (e === 9 || e === 0x12) ? '#ff5050' : '#ff8a00';
+function dessinerSprite(t){
+  const s = D.sprites[t.sprite & 0x7F]; if (!s) return;
+  const miroir = t.sprite & 0x80, x0 = t.x * 12, y0 = (t.y - 0x32) * 3;
+  s.forEach((ligne, y) => {
+    for (let i = 0; i < ligne.length; i++) {
+      const c = ligne[miroir ? ligne.length - 1 - i : i]; if (c === '.') continue;
+      g.fillStyle = D.palette[parseInt(c, 16)]; g.fillRect(x0 + i * 6, y0 + y * 3, 6, 3);
+    }
+  });
+}
+function dessinerSondes(t){
+  const e = t.etat & 0x7F;
+  if (!(t.dirs & MONTE)) {                        // recherche du sol : six octets sous les pieds, sur la vitesse du tour
+    const v = Math.max(1, T.vitesses[t.saut]);
+    g.fillStyle = 'rgba(56,240,255,.35)'; g.fillRect(t.x * 12, (t.y + t.hauteur + 1 - 0x32) * 3, 72, v * 3);
+  }
+  if (T.etats_mur.includes(e)) {                  // test de mur : une colonne, 35 lignes
+    const h = t.dirs & 0x0C;
+    let col = h ? ((h & VERS_DROITE) ? t.x + 7 : t.x - 1) : (e === 2 ? t.x - 1 : e === 0x0B ? t.x + 7 : null);
+    if (col !== null && col >= 0 && col < 80) {
+      g.strokeStyle = '#ff5050'; g.lineWidth = 2; g.strokeRect(col * 12 + 1, (t.y + 4 - 0x32) * 3, 10, 0x23 * 3);
+      if (t.mur === 0) { g.fillStyle = 'rgba(255,80,80,.55)'; g.fillRect(col * 12 + 1, (t.y + 4 - 0x32) * 3, 10, 0x23 * 3); }
+    }
+  }
+}
+function dessiner(){
+  g.drawImage(fond, 0, 0);
+  if ($('oGrille').checked) {
+    g.strokeStyle = 'rgba(255,255,154,.13)'; g.lineWidth = 1;
+    for (let c = 0; c <= 20; c++) { g.beginPath(); g.moveTo(c * 48 + .5, 0); g.lineTo(c * 48 + .5, 408); g.stroke(); }
+    for (let r = 0; r <= 17; r++) { g.beginPath(); g.moveTo(0, r * 24 + .5); g.lineTo(960, r * 24 + .5); g.stroke(); }
+  }
+  g.setLineDash([6, 6]); g.strokeStyle = 'rgba(255,255,154,.35)'; g.beginPath(); g.moveTo(0, 8 * 3 + .5); g.lineTo(960, 8 * 3 + .5); g.stroke(); g.setLineDash([]);
+  if ($('oTrace').checked) trace.forEach(p => { g.fillStyle = COUL_ETAT(p.e); g.fillRect(p.x * 12 + 33, (p.y - 0x32) * 3 - 1, 6, 4); });
+  dessinerSprite(tal);
+  if ($('oSondes').checked) dessinerSondes(tal);
+}
+
+// ---- panneau
+const fl = (on, s) => `<span class="fl ${on ? 'on' : ''}">${s}</span>`;
+function majPanneau(){
+  const t = tal, e = t.etat & 0x7F, j = joyDernier;
+  const bloquant = (T.transitions[e] && T.transitions[e][1] & 0x10) && !(t.etat & 0x80);
+  const rows = [
+    ['Tour', n + (pause ? '  (pause)' : '')],
+    ['Joystick', fl(j & HAUT, '↑') + fl(j & BAS, '↓') + fl(j & GAUCHE, '←') + fl(j & DROITE, '→') + fl(j & FEU, 'F') + ' ' + CLASSES[m.classe(j)]],
+    ['État +A', `<span class="etat">${hx(e)}</span> ${nomEtat(e)}${t.etat & 0x80 ? ', fini' : ''}${bloquant ? ', bloquant' : ''}`],
+    ['Animation', `pas ${t.pas}, attente ${t.attente}, sprite ${hx(t.sprite)}`],
+    ['X +3', `${hx(t.x)} = ${t.x} octets (${t.x * 2} px)`],
+    ['Y +4', `${hx(t.y)} ; pieds ${hx(t.y + t.hauteur)}`],
+    ['Directions +7', fl(t.dirs & MONTE, '↑') + fl(t.dirs & DESCEND, '↓') + fl(t.dirs & VERS_GAUCHE, '←') + fl(t.dirs & VERS_DROITE, '→')],
+    ['Vitesses', `vx ${t.vx}, vy ${t.vy}`],
+    ['Index saut', `${hx(t.saut)} → ${T.vitesses[t.saut]} lignes`],
+    ['Mur &B554', t.mur === 0 ? '<span style="color:var(--red)">mur devant</span>' : 'libre'],
+  ];
+  $('val').innerHTML = rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
+  const d = dernierSaut;
+  if (d) $('saut').innerHTML = [
+    ['Type', d.type], ['Hauteur', d.type === 'saut' ? d.hauteur + ' lignes' : '—'], ['Descente', d.chute + ' lignes'],
+    ['Durée', d.duree + ' tours (' + (d.duree / hz).toFixed(2) + ' s à ' + hz + '/s)'],
+    ['Portée', d.portee + ' octets = ' + d.portee * 2 + ' px'], ['Reprise', d.reprise === null ? 'en cours…' : d.reprise + ' tours avant de pouvoir agir'],
+  ].map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
+  document.querySelectorAll('.vit label').forEach((l, i) => l.classList.toggle('cur', i === indexUtilise));
+}
+
+function boucle(t){
+  const dt = Math.min(250, t - prec); prec = t;
+  if (!pause) { acc += dt; let k = 0; while (acc >= 1000 / hz && k++ < 6) { tick(tenu); acc -= 1000 / hz; } if (k >= 6) acc = 0; }
+  dessiner(); majPanneau();
+  requestAnimationFrame(boucle);
+}
+construireSalle(); construireReglages();
+requestAnimationFrame(t => { prec = t; boucle(t); });
+}
+</script>
+</body>
+</html>
